@@ -1,3 +1,4 @@
+using HorrorGame.Interaction;
 using HorrorGame.Player;
 using UnityEditor;
 using UnityEngine;
@@ -6,9 +7,11 @@ using UnityEngine.Rendering.Universal;
 namespace HorrorGame.EditorTools
 {
     /// <summary>
-    /// Creates Assets/_Project/Prefabs/Player.prefab if it doesn't exist yet.
+    /// Creates Assets/_Project/Prefabs/Player.prefab if it doesn't exist yet, and adds components
+    /// introduced by later milestones to an existing prefab (without touching anything else on it).
     ///
-    /// Player                (CharacterController, PlayerInputReader, PlayerMotor, PlayerLook)
+    /// Player                (CharacterController, PlayerInputReader, PlayerMotor, PlayerLook,
+    ///                        PlayerInteractor, InteractionPromptUI)
     ///   CameraRoot          (pitch pivot at eye height)
     ///     PlayerCamera      (Camera, AudioListener)
     ///       Flashlight      (Spot Light, Flashlight)
@@ -21,7 +24,10 @@ namespace HorrorGame.EditorTools
         {
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(ProjectPaths.PlayerPrefab);
             if (existing != null && !overwrite)
-                return existing;
+            {
+                UpgradeExisting();
+                return AssetDatabase.LoadAssetAtPath<GameObject>(ProjectPaths.PlayerPrefab);
+            }
 
             AssetFolders.Ensure(ProjectPaths.Prefabs);
             var root = new GameObject("Player") { tag = "Player" };
@@ -70,9 +76,48 @@ namespace HorrorGame.EditorTools
             beam.shadowStrength = 0.9f;
             flashlightObject.AddComponent<Flashlight>();
 
+            AddMissingComponents(root);
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, ProjectPaths.PlayerPrefab);
             Object.DestroyImmediate(root);
             return prefab;
+        }
+
+        /// <summary>Adds any missing later-milestone components to the saved prefab.</summary>
+        static void UpgradeExisting()
+        {
+            var root = PrefabUtility.LoadPrefabContents(ProjectPaths.PlayerPrefab);
+            try
+            {
+                if (AddMissingComponents(root))
+                {
+                    PrefabUtility.SaveAsPrefabAsset(root, ProjectPaths.PlayerPrefab);
+                    Debug.Log("[Horror Game] Added new components to " + ProjectPaths.PlayerPrefab + ".");
+                }
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        /// <summary>Phase 2 components. Returns true if anything was added.</summary>
+        static bool AddMissingComponents(GameObject root)
+        {
+            bool changed = false;
+            if (root.GetComponent<PlayerInteractor>() == null)
+            {
+                var interactor = root.AddComponent<PlayerInteractor>();
+                var playerCamera = root.GetComponentInChildren<Camera>(true);
+                if (playerCamera != null)
+                    SerializedFields.Set(interactor, "rayOrigin", playerCamera.transform);
+                changed = true;
+            }
+            if (root.GetComponent<InteractionPromptUI>() == null)
+            {
+                root.AddComponent<InteractionPromptUI>();
+                changed = true;
+            }
+            return changed;
         }
     }
 }

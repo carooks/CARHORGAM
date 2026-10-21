@@ -2,12 +2,12 @@
 
 _Last updated: 2026-10-21_
 
-## Current phase: 1 — Playable foundation
+## Current phase: 2 — Core gameplay
 
-### Implemented
+### Phase 1 — Playable foundation: verified
 
-Verified by Chad on Windows (2026-10-21): the project opens, the scene generates and the player
-can walk around. The other checks below have not been reported yet.
+Verified by Chad on Windows (2026-10-21) and committed to `main`, including the generated scene,
+materials and settings.
 
 - Unity 6 URP project skeleton: package manifest, `.gitignore`, `.gitattributes` with Git LFS.
 - First-open bootstrap that configures URP (Forward+, HDR, additional-light shadows, linear colour)
@@ -22,32 +22,47 @@ can walk around. The other checks below have not been reported yet.
   Water, Chestnut, Pine, Park, Garfield, Walnut and Bergey streets, houses east of 94 and along
   State/Walnut, the pond north-west of the facility, street lights (some dead), trees, map bounds.
   See [Reference/README.md](Reference/README.md) for how the real map was translated.
-- Parking lot with the player's van and a glowing extraction pad (visual only until Phase 2).
+- Parking lot with the player's van and a glowing extraction pad (visual only until a later milestone).
 - Atmosphere: dark ambient light, exponential fog, dim moonlight, post-processing (vignette,
   film grain, desaturation, bloom).
 - Procedural placeholder audio (no sound files): global low drone, positional machine hum at
   each tank, electrical buzz on faulty lamps.
 
-### How to verify Phase 1
+### Phase 2, milestone 1 — Raycast interaction: written, not yet verified in Unity
 
-1. Open the project (see the README). The Console should show no red errors.
-2. Press Play. You start in the parking lot next to the van, facing the facility entrance.
-3. Check: WASD moves, mouse looks, Shift sprints, Space jumps, F toggles the flashlight.
-4. Walk into the facility, up the ramp onto the mezzanine, and around all rooms. You should not
-   be able to walk through walls, props or the pond, or leave the map.
-5. Listen: a constant low drone, a hum near the tanks, a buzz near flickering lamps.
+- `IInteractable` interface (`Scripts/Runtime/Interaction`): prompt text, whether it can be used
+  right now, and what happens. Pickups, doors and the extraction point will implement it.
+- `PlayerInteractor` on the player: a 2.5 m ray from the camera finds the interactable under the
+  crosshair; E uses it. Walls block the ray. Raises an `Interacted` event for later systems.
+- `InteractionPromptUI` on the player: crosshair dot that brightens on a target and a prompt line
+  such as "[E] Cut the power" (dimmed with no key hint when the object can't be used right now).
+  Built at runtime with Unity's built-in font, so no UI assets are needed.
+- `LightSwitch` (first interactable): a breaker box on the outside wall, left of the facility
+  entrance, that switches every ceiling lamp in the facility off and on (with a click, a moving
+  lever, and the lamp fixtures going dark).
+- The existing player prefab gets the two new components automatically when the project opens
+  or the scene is rebuilt.
+
+### How to verify Phase 2, milestone 1
+
+1. Pull the branch and open the project. The Console should show no red errors.
+2. Menu **Horror Game > Rebuild Phase 1 Scene** > Rebuild (this adds the breaker box).
+3. Press Play. A faint dot is in the middle of the screen.
+4. Walk toward the facility entrance. Left of the door is a grey box with a yellow handle.
+   Look at it from within about 2.5 m: the dot brightens and "[E] Cut the power" appears.
+5. Press E: click sound, handle flips, every lamp inside goes dark and the buzzing stops.
+   The prompt now reads "[E] Restore the power". Press E again to turn them back on.
+6. Step back, or look away: the prompt disappears. Press Esc: the prompt disappears too.
+7. Commit the changed `Player.prefab` and `Phase1_Graybox.unity` from GitHub Desktop.
 
 ### Known issues / risks
 
-- Not yet confirmed: flashlight, jump/ramp/mezzanine, collisions, audio, lighting look.
+- Milestone 1 code was written without a Unity Editor and has not been compiled or run yet.
 - Light intensities, fog density and post-processing are first-pass values and may be too dark
   or too bright on your monitor.
-- `ProjectVersion.txt` names Unity 6000.0.58f2; Unity Hub will offer to open with whichever
-  Unity 6 version is installed. Commit the updated file after the first open.
 - The town is a compressed block-out, not to scale.
 
 ### Next milestone
 
-Phase 1 sign-off: run the remaining checks above, tune lighting, and commit the generated scene,
-materials and settings from the Windows machine. Then Phase 2, milestone 1: raycast interaction
-system (look at an object, see a prompt, press E).
+Phase 2, milestone 2: collectible objects with configurable values (scrap items built on
+`IInteractable`), then inventory and carrying capacity.

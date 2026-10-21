@@ -18,11 +18,15 @@ namespace HorrorGame.Player
         // Legacy "Mouse X/Y" axes are pre-scaled by 0.1; multiply back so both paths report pixels.
         const float LegacyMouseToPixels = 10f;
 
+        /// <summary>Key name shown in on-screen prompts. Keep in sync with the bindings below.</summary>
+        public const string InteractKeyLabel = "E";
+
         public Vector2 Move { get; private set; }
         public Vector2 LookDelta { get; private set; }
         public bool SprintHeld { get; private set; }
         public bool JumpPressed { get; private set; }
         public bool FlashlightPressed { get; private set; }
+        public bool InteractPressed { get; private set; }
         public bool PausePressed { get; private set; }
         public bool PrimaryClickPressed { get; private set; }
 
@@ -39,7 +43,7 @@ namespace HorrorGame.Player
         {
             Move = Vector2.zero;
             LookDelta = Vector2.zero;
-            SprintHeld = JumpPressed = FlashlightPressed = PausePressed = PrimaryClickPressed = false;
+            SprintHeld = JumpPressed = FlashlightPressed = InteractPressed = PausePressed = PrimaryClickPressed = false;
         }
 
 #if ENABLE_INPUT_SYSTEM
@@ -49,7 +53,7 @@ namespace HorrorGame.Player
             var mouse = Mouse.current;
 
             Vector2 move = Vector2.zero;
-            bool sprint = false, jump = false, flashlight = false, pause = false;
+            bool sprint = false, jump = false, flashlight = false, interact = false, pause = false;
             if (keyboard != null)
             {
                 if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) move.y += 1f;
@@ -59,6 +63,7 @@ namespace HorrorGame.Player
                 sprint = keyboard.leftShiftKey.isPressed;
                 jump = keyboard.spaceKey.wasPressedThisFrame;
                 flashlight = keyboard.fKey.wasPressedThisFrame;
+                interact = keyboard.eKey.wasPressedThisFrame;
                 pause = keyboard.escapeKey.wasPressedThisFrame;
             }
 
@@ -66,6 +71,7 @@ namespace HorrorGame.Player
             SprintHeld = sprint;
             JumpPressed = jump;
             FlashlightPressed = flashlight;
+            InteractPressed = interact;
             PausePressed = pause;
             LookDelta = mouse != null ? mouse.delta.ReadValue() : Vector2.zero;
             PrimaryClickPressed = mouse != null && mouse.leftButton.wasPressedThisFrame;
@@ -78,6 +84,7 @@ namespace HorrorGame.Player
             SprintHeld = Input.GetKey(KeyCode.LeftShift);
             JumpPressed = Input.GetKeyDown(KeyCode.Space);
             FlashlightPressed = Input.GetKeyDown(KeyCode.F);
+            InteractPressed = Input.GetKeyDown(KeyCode.E);
             PausePressed = Input.GetKeyDown(KeyCode.Escape);
             LookDelta = new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")) * LegacyMouseToPixels;
             PrimaryClickPressed = Input.GetMouseButtonDown(0);

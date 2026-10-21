@@ -27,6 +27,7 @@ version of Wadsworth, Ohio. Inspired by the tension and low-poly look of Lethal 
 | Sprint | Left Shift |
 | Jump | Space |
 | Flashlight | F |
+| Interact (when a prompt shows) | E |
 | Release / recapture mouse | Esc / left click |
 
 ## Project layout
@@ -35,7 +36,8 @@ version of Wadsworth, Ohio. Inspired by the tension and low-poly look of Lethal 
 Assets/_Project/
   Scripts/Runtime/        game code (assembly HorrorGame.Runtime)
     Player/               input reader, movement, mouse look, flashlight
-    World/                environment behaviours (flickering lights)
+    Interaction/          raycast interaction: IInteractable, PlayerInteractor, prompt HUD
+    World/                environment behaviours (flickering lights, light switches)
     Audio/                procedural placeholder sounds, ambient emitters
   Scripts/Editor/         editor tooling (assembly HorrorGame.Editor)
     ProjectBootstrap      first-open setup
@@ -57,4 +59,7 @@ Docs/
 - The graybox scene is generated from code. Change the layout in `FacilityBuilder.Layout` or
   `TownBlockoutBuilder`, then run **Horror Game > Rebuild Phase 1 Scene**. Materials and the
   player prefab are only created when missing, so hand edits to them survive a rebuild.
+  New player components from later milestones are added to the existing prefab automatically.
+- To make something usable, implement `IInteractable` (prompt text, whether it can be used now,
+  what happens) on a component on or above its collider. `LightSwitch` is the reference example.
 - Binary files (textures, audio, models) are stored with Git LFS (see `.gitattributes`).

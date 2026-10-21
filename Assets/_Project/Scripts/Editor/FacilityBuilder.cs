@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using HorrorGame.Audio;
 using HorrorGame.World;
+using UnityEditor;
 using UnityEngine;
 
 namespace HorrorGame.EditorTools
@@ -64,6 +66,8 @@ namespace HorrorGame.EditorTools
             var props = GrayboxKit.Group("Props", root).transform;
             var lights = GrayboxKit.Group("Lights", root).transform;
             var rng = new System.Random(20261021);
+            var lampLights = new List<Object>();
+            var lampFixtures = new List<Object>();
 
             Vector3 center = origin + new Vector3(Width * 0.5f, 0f, Depth * 0.5f);
             kit.Box("Floor", structure, center + new Vector3(0f, -0.03f, 0f), new Vector3(Width, 0.1f, Depth), kit.ConcreteFloor);
@@ -83,10 +87,10 @@ namespace HorrorGame.EditorTools
                         kit.Box($"DoorStripe_{id}", structure, p + new Vector3(0f, 2.55f, -CellSize * 0.5f - 0.01f), new Vector3(CellSize, 0.15f, 0.02f), kit.Hazard, false);
                         break;
                     case 'L':
-                        CeilingLamp(lights, kit, p, id, false);
-                        break;
                     case 'l':
-                        CeilingLamp(lights, kit, p, id, true);
+                        var (lampLight, fixture) = CeilingLamp(lights, kit, p, id, cell == 'l');
+                        lampLights.Add(lampLight.gameObject);
+                        lampFixtures.Add(fixture);
                         break;
                     case 'K':
                         Shelf(props, kit, p, id, rng);
@@ -109,6 +113,8 @@ namespace HorrorGame.EditorTools
                         break;
                 }
             }
+
+            BreakerPanel(props, kit, EntrancePosition(origin), lampLights, lampFixtures);
         }
 
         static Vector3 CellCenter(Vector3 origin, int row, int column)
@@ -146,25 +152,55 @@ namespace HorrorGame.EditorTools
             }
         }
 
-        static void CeilingLamp(Transform parent, GrayboxKit kit, Vector3 p, string id, bool faulty)
+        static (Light light, Renderer fixture) CeilingLamp(Transform parent, GrayboxKit kit, Vector3 p, string id, bool faulty)
         {
             var fixture = kit.Box($"LampFixture_{id}", parent, p + new Vector3(0f, WallHeight - 0.05f, 0f),
                 new Vector3(1.4f, 0.08f, 0.3f), kit.LampWarm, false);
             var light = GrayboxKit.PointLight($"LampLight_{id}", parent, p + new Vector3(0f, WallHeight - 0.4f, 0f),
                 new Color(1f, 0.85f, 0.62f), faulty ? 5f : 6f, 9f);
+            var fixtureRenderer = fixture.GetComponent<Renderer>();
             if (!faulty)
-                return;
+                return (light, fixtureRenderer);
 
             var flicker = light.gameObject.AddComponent<LightFlicker>();
             // LightFlicker dims the fixture through a per-renderer property block, so other lamps
             // sharing the material are unaffected.
-            SerializedFields.Set(flicker, "emissiveRenderer", fixture.GetComponent<Renderer>());
+            SerializedFields.Set(flicker, "emissiveRenderer", fixtureRenderer);
 
             var buzz = light.gameObject.AddComponent<AmbientSound>();
             SerializedFields.SetEnum(buzz, "sound", (int)ProceduralSound.ElectricalBuzz);
             SerializedFields.SetFloat(buzz, "volume", 0.25f);
             SerializedFields.SetBool(buzz, "spatial", true);
             SerializedFields.SetFloat(buzz, "maxDistance", 8f);
+            return (light, fixtureRenderer);
+        }
+
+        /// <summary>
+        /// Breaker box on the outside wall, left of the entrance as you approach from the parking lot.
+        /// Flipping it switches every facility ceiling lamp on or off.
+        /// </summary>
+        static void BreakerPanel(Transform parent, GrayboxKit kit, Vector3 entrance, List<Object> lampLights,
+            List<Object> lampFixtures)
+        {
+            // The entrance cell's outer face is half a cell south of its centre.
+            Vector3 wallFace = entrance + new Vector3(-2.5f, 1.4f, -CellSize * 0.5f);
+            var panel = GrayboxKit.Group("BreakerPanel", parent);
+            panel.transform.position = wallFace + new Vector3(0f, 0f, -0.06f);
+            kit.Box("Box", panel.transform, panel.transform.position, new Vector3(0.6f, 0.8f, 0.12f), kit.Metal);
+            kit.Box("Label", panel.transform, panel.transform.position + new Vector3(0f, 0.3f, -0.061f),
+                new Vector3(0.4f, 0.08f, 0.01f), kit.Hazard, false);
+
+            // The lever moves, so it must not be marked static (static batching would freeze it).
+            var pivot = GrayboxKit.Group("LeverPivot", panel.transform);
+            pivot.transform.position = panel.transform.position + new Vector3(0f, -0.05f, -0.08f);
+            var handle = kit.Box("Handle", pivot.transform, pivot.transform.position + new Vector3(0f, 0.12f, 0f),
+                new Vector3(0.07f, 0.24f, 0.07f), kit.Hazard, false);
+            GameObjectUtility.SetStaticEditorFlags(handle, 0);
+
+            var breaker = panel.AddComponent<LightSwitch>();
+            SerializedFields.SetArray(breaker, "lights", lampLights);
+            SerializedFields.SetArray(breaker, "fixtures", lampFixtures);
+            SerializedFields.Set(breaker, "lever", pivot.transform);
         }
 
         static void Shelf(Transform parent, GrayboxKit kit, Vector3 p, string id, System.Random rng)
