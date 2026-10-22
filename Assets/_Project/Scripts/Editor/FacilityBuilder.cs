@@ -24,19 +24,20 @@ namespace HorrorGame.EditorTools
         //   K  storage shelf       C  crate stack
         //   T  humming tank        p  pillar
         //   r  ramp rising north   h  raised platform (mezzanine)
+        //   $  scrap item on the floor (type picked by ScrapBuilder)
         public static readonly string[] Layout =
         {
             "#################",
+            "#K$K.K.#T..T..T.#",
+            "#..l...#.$.L....#",
             "#K.K.K.#T..T..T.#",
-            "#..l...#...L....#",
-            "#K.K.K.#T..T..T.#",
-            "#...L....p...p..#",
+            "#...L....p.$.p..#",
             "###.####........#",
-            "#.......L..l#####",
-            "#.p..p..#.......#",
+            "#..$....L..l#####",
+            "#.p..p..#.....$.#",
             "#...h...#..C..K.#",
-            "#...r.L.#.l...K.#",
-            "#.C.....#...C...#",
+            "#...r.L.#.l.$.K.#",
+            "#.C...$.#...C...#",
             "##.######.......#",
             "#...L.......L...#",
             "#C.............C#",
@@ -66,6 +67,8 @@ namespace HorrorGame.EditorTools
             var props = GrayboxKit.Group("Props", root).transform;
             var lights = GrayboxKit.Group("Lights", root).transform;
             var rng = new System.Random(20261021);
+            // Separate generator so adding scrap doesn't reshuffle the shelves and crates.
+            var scrapRng = new System.Random(4242);
             var lampLights = new List<Object>();
             var lampFixtures = new List<Object>();
 
@@ -110,6 +113,9 @@ namespace HorrorGame.EditorTools
                         break;
                     case 'h':
                         Platform(structure, kit, origin, r, c, id);
+                        break;
+                    case '$':
+                        ScrapBuilder.PlaceRandom(props, kit, p, scrapRng);
                         break;
                 }
             }

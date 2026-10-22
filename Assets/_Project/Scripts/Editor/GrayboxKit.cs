@@ -39,6 +39,9 @@ namespace HorrorGame.EditorTools
         public Material WindowLit { get; }
         public Material ExtractionGlow { get; }
         public Material VanPaint { get; }
+        public Material ScrapBrass { get; }
+        public Material ScrapRed { get; }
+        public Material ScrapPlush { get; }
 
         public GrayboxKit()
         {
@@ -72,6 +75,10 @@ namespace HorrorGame.EditorTools
             WindowLit = Get("M_WindowLit", new Color(0.9f, 0.75f, 0.45f), 0.6f, 0f, new Color(1f, 0.7f, 0.35f) * 1.2f);
             ExtractionGlow = Get("M_ExtractionGlow", new Color(0.2f, 0.9f, 0.4f), 0.2f, 0f, new Color(0.2f, 1f, 0.4f) * 1.5f);
             VanPaint = Get("M_VanPaint", new Color(0.55f, 0.55f, 0.52f), 0.5f, 0.2f);
+            // Scrap is a little brighter and shinier than its surroundings so the flashlight picks it out.
+            ScrapBrass = Get("M_ScrapBrass", new Color(0.85f, 0.65f, 0.25f), 0.75f, 0.9f);
+            ScrapRed = Get("M_ScrapRed", new Color(0.7f, 0.12f, 0.1f), 0.55f, 0.2f);
+            ScrapPlush = Get("M_ScrapPlush", new Color(0.55f, 0.42f, 0.32f), 0.05f);
         }
 
         Material Get(string name, Color color, float smoothness, float metallic = 0f, Color? emission = null)

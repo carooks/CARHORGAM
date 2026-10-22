@@ -56,7 +56,34 @@ the facility lights off and on. Rebuilt scene and player prefab committed.
    The prompt now reads "[E] Restore the power". Press E again to turn them back on.
 5. Step back, or look away: the prompt disappears. Press Esc: the prompt disappears too.
 
+### Phase 2, milestone 2 — Collectible scrap: written, not yet verified in Unity
+
+- `ScrapItem` (`Scripts/Runtime/Items`): an `IInteractable` with a display name, a value range
+  (the value is rolled each time you press Play) and a weight. Prompt: "[E] Pick up Toolbox ($42)".
+- `PlayerInventory` on the player: keeps the picked-up items (hidden, attached to the player),
+  with total value and total weight. No capacity limit yet; that is the next milestone.
+- `InventoryHUD` on the player: bottom-left list of carried items with their values and a green total.
+- Six kinds of graybox scrap built from primitives in `ScrapBuilder` (Old Radio, Toolbox, Brass Bell,
+  Gas Can, Teddy Bear, Candlestick), with shinier materials so the flashlight picks them out.
+  Seven are placed on the facility floor at `$` cells in `FacilityBuilder.Layout`.
+- Shared `HudFactory` helper for runtime-built HUD text, used by both HUDs.
+
+### How to verify Phase 2, milestone 2
+
+1. Pull the branch, open the project, then **Horror Game > Rebuild Phase 1 Scene** > Rebuild.
+   The Console should show no red errors.
+2. Press Play and go into the facility with the flashlight on. Small coloured objects lie on the
+   floor: one between the first shelves on the left, several in the middle rooms.
+3. Look at one: "[E] Pick up Old Radio ($31)" (name and price vary). Press E: it disappears with
+   a soft click, and the bottom-left corner lists it with a green "Total".
+4. Pick up a few more: the list grows and the total adds up.
+5. Stop and press Play again: the same items have different values.
+6. Commit the changed scene, `Player.prefab` and the three new `M_Scrap*` materials, then push.
+
 ### Known issues / risks
+
+- Milestone 2 code was written without a Unity Editor and has not been compiled or run yet.
+- Carried scrap can't be dropped yet and there is no carrying limit.
 
 - Light intensities, fog density and post-processing are first-pass values and may be too dark
   or too bright on your monitor.
@@ -64,5 +91,5 @@ the facility lights off and on. Rebuilt scene and player prefab committed.
 
 ### Next milestone
 
-Phase 2, milestone 2: collectible objects with configurable values (scrap items built on
-`IInteractable`), then inventory and carrying capacity.
+Phase 2, milestone 3: inventory slots and carrying capacity (weight slows you down, a slot limit),
+switching between carried items, and dropping them (G).

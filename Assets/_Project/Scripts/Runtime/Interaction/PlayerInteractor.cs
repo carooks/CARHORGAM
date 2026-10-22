@@ -53,8 +53,9 @@ namespace HorrorGame.Interaction
             }
 
             // Read the prompt after interacting so the HUD shows the new state straight away
-            // (e.g. "Turn on" becomes "Turn off"), and drop targets destroyed by the interaction.
-            if (Focus is UnityEngine.Object focusObject && focusObject == null)
+            // (e.g. "Turn on" becomes "Turn off"), and drop targets the interaction destroyed or
+            // hid (e.g. an item that was just picked up).
+            if (Focus is Behaviour focusBehaviour && (focusBehaviour == null || !focusBehaviour.isActiveAndEnabled))
                 Focus = null;
             Prompt = Focus?.GetPrompt(this);
             CanInteractWithFocus = Focus != null && Focus.CanInteract(this);

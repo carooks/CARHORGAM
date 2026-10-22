@@ -37,12 +37,15 @@ Assets/_Project/
   Scripts/Runtime/        game code (assembly HorrorGame.Runtime)
     Player/               input reader, movement, mouse look, flashlight
     Interaction/          raycast interaction: IInteractable, PlayerInteractor, prompt HUD
+    Items/                scrap items and the player's inventory
+    UI/                   runtime-built HUD pieces (inventory readout, HudFactory helper)
     World/                environment behaviours (flickering lights, light switches)
     Audio/                procedural placeholder sounds, ambient emitters
   Scripts/Editor/         editor tooling (assembly HorrorGame.Editor)
     ProjectBootstrap      first-open setup
     Phase1SceneBuilder    generates the graybox scene
     FacilityBuilder       facility interior from a text grid
+    ScrapBuilder          scrap item catalogue (names, values, weights, shapes)
     TownBlockoutBuilder   streets, houses, trees, pond around the facility
     RenderPipelineSetup   URP asset + post-processing profile
   Scenes/ Materials/ Prefabs/ Settings/ Meshes/   generated on first open

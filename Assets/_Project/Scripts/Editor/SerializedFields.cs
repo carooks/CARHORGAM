@@ -13,6 +13,8 @@ namespace HorrorGame.EditorTools
         public static void Set(Object target, string field, Object value) => Apply(target, field, p => p.objectReferenceValue = value);
         public static void SetFloat(Object target, string field, float value) => Apply(target, field, p => p.floatValue = value);
         public static void SetBool(Object target, string field, bool value) => Apply(target, field, p => p.boolValue = value);
+        public static void SetString(Object target, string field, string value) => Apply(target, field, p => p.stringValue = value);
+        public static void SetVector2Int(Object target, string field, Vector2Int value) => Apply(target, field, p => p.vector2IntValue = value);
         public static void SetEnum(Object target, string field, int value) => Apply(target, field, p => p.enumValueIndex = value);
 
         public static void SetArray(Object target, string field, IReadOnlyList<Object> values) => Apply(target, field, p =>
