@@ -264,6 +264,8 @@ GameObject:
   - component: {fileID: 7287493738584306896}
   - component: {fileID: 8986772478653482016}
   - component: {fileID: 7293046701579790039}
+  - component: {fileID: 4645732274669907953}
+  - component: {fileID: 6129909201446391911}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -359,6 +361,42 @@ MonoBehaviour:
   sensitivity: 0.1
   pitchLimit: 85
   invertY: 0
+--- !u!114 &4645732274669907953
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8065041962822572397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e58fbb786ea440bab1002ffabdc142fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rayOrigin: {fileID: 3930079427637359403}
+  reach: 2.5
+  layers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &6129909201446391911
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8065041962822572397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a86f06110404edca99bef58b89ba7fd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fontSize: 24
+  promptColor: {r: 0.92, g: 0.92, b: 0.88, a: 1}
+  unavailableColor: {r: 0.6, g: 0.6, b: 0.6, a: 0.8}
+  crosshairIdle: {r: 1, g: 1, b: 1, a: 0.35}
+  crosshairFocused: {r: 1, g: 1, b: 1, a: 0.9}
+  crosshairIdleSize: 4
+  crosshairFocusedSize: 7
 --- !u!1 &9142418095646305257
 GameObject:
   m_ObjectHideFlags: 0
