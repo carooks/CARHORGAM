@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-10-21_
+_Last updated: 2026-10-22_
 
 ## Current phase: 2 — Core gameplay
 
@@ -28,7 +28,10 @@ materials and settings.
 - Procedural placeholder audio (no sound files): global low drone, positional machine hum at
   each tank, electrical buzz on faulty lamps.
 
-### Phase 2, milestone 1 — Raycast interaction: written, not yet verified in Unity
+### Phase 2, milestone 1 — Raycast interaction: verified
+
+Verified by Chad on Windows (2026-10-21): the prompt appears on the breaker box and E switches
+the facility lights off and on. Rebuilt scene and player prefab committed.
 
 - `IInteractable` interface (`Scripts/Runtime/Interaction`): prompt text, whether it can be used
   right now, and what happens. Pickups, doors and the extraction point will implement it.
@@ -45,19 +48,16 @@ materials and settings.
 
 ### How to verify Phase 2, milestone 1
 
-1. Pull the branch and open the project. The Console should show no red errors.
-2. Menu **Horror Game > Rebuild Phase 1 Scene** > Rebuild (this adds the breaker box).
-3. Press Play. A faint dot is in the middle of the screen.
-4. Walk toward the facility entrance. Left of the door is a grey box with a yellow handle.
+1. Open the project. The Console should show no red errors.
+2. Press Play. A faint dot is in the middle of the screen.
+3. Walk toward the facility entrance. Left of the door is a grey box with a yellow handle.
    Look at it from within about 2.5 m: the dot brightens and "[E] Cut the power" appears.
-5. Press E: click sound, handle flips, every lamp inside goes dark and the buzzing stops.
+4. Press E: click sound, handle flips, every lamp inside goes dark and the buzzing stops.
    The prompt now reads "[E] Restore the power". Press E again to turn them back on.
-6. Step back, or look away: the prompt disappears. Press Esc: the prompt disappears too.
-7. Commit the changed `Player.prefab` and `Phase1_Graybox.unity` from GitHub Desktop.
+5. Step back, or look away: the prompt disappears. Press Esc: the prompt disappears too.
 
 ### Known issues / risks
 
-- Milestone 1 code was written without a Unity Editor and has not been compiled or run yet.
 - Light intensities, fog density and post-processing are first-pass values and may be too dark
   or too bright on your monitor.
 - The town is a compressed block-out, not to scale.
