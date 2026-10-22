@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,6 +14,13 @@ namespace HorrorGame.EditorTools
         public static void SetFloat(Object target, string field, float value) => Apply(target, field, p => p.floatValue = value);
         public static void SetBool(Object target, string field, bool value) => Apply(target, field, p => p.boolValue = value);
         public static void SetEnum(Object target, string field, int value) => Apply(target, field, p => p.enumValueIndex = value);
+
+        public static void SetArray(Object target, string field, IReadOnlyList<Object> values) => Apply(target, field, p =>
+        {
+            p.arraySize = values.Count;
+            for (int i = 0; i < values.Count; i++)
+                p.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+        });
 
         static void Apply(Object target, string field, System.Action<SerializedProperty> assign)
         {
