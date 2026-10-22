@@ -1,5 +1,7 @@
 using HorrorGame.Interaction;
+using HorrorGame.Items;
 using HorrorGame.Player;
+using HorrorGame.UI;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -11,7 +13,7 @@ namespace HorrorGame.EditorTools
     /// introduced by later milestones to an existing prefab (without touching anything else on it).
     ///
     /// Player                (CharacterController, PlayerInputReader, PlayerMotor, PlayerLook,
-    ///                        PlayerInteractor, InteractionPromptUI)
+    ///                        PlayerInteractor, InteractionPromptUI, PlayerInventory, InventoryHUD)
     ///   CameraRoot          (pitch pivot at eye height)
     ///     PlayerCamera      (Camera, AudioListener)
     ///       Flashlight      (Spot Light, Flashlight)
@@ -115,6 +117,16 @@ namespace HorrorGame.EditorTools
             if (root.GetComponent<InteractionPromptUI>() == null)
             {
                 root.AddComponent<InteractionPromptUI>();
+                changed = true;
+            }
+            if (root.GetComponent<PlayerInventory>() == null)
+            {
+                root.AddComponent<PlayerInventory>();
+                changed = true;
+            }
+            if (root.GetComponent<InventoryHUD>() == null)
+            {
+                root.AddComponent<InventoryHUD>();
                 changed = true;
             }
             return changed;

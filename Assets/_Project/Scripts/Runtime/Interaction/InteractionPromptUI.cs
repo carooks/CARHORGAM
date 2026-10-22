@@ -1,4 +1,5 @@
 using HorrorGame.Player;
+using HorrorGame.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,6 +20,8 @@ namespace HorrorGame.Interaction
         [SerializeField] Color crosshairFocused = new Color(1f, 1f, 1f, 0.9f);
         [SerializeField] float crosshairIdleSize = 4f;
         [SerializeField] float crosshairFocusedSize = 7f;
+
+        static readonly Vector2 ScreenCentre = new Vector2(0.5f, 0.5f);
 
         PlayerInteractor interactor;
         GameObject canvasObject;
@@ -64,42 +67,18 @@ namespace HorrorGame.Interaction
 
         void BuildCanvas()
         {
-            canvasObject = new GameObject("InteractionHUD", typeof(RectTransform));
-            canvasObject.transform.SetParent(transform, false);
-            var canvas = canvasObject.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 10;
-            var scaler = canvasObject.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            canvasObject = HudFactory.CreateCanvas("InteractionHUD", transform, 10);
 
             var crosshairObject = new GameObject("Crosshair", typeof(RectTransform));
             crosshairObject.transform.SetParent(canvasObject.transform, false);
             crosshair = crosshairObject.AddComponent<Image>();
             crosshair.raycastTarget = false;
-            Centre(crosshair.rectTransform, Vector2.zero, new Vector2(crosshairIdleSize, crosshairIdleSize));
+            HudFactory.Place(crosshair.rectTransform, ScreenCentre, Vector2.zero,
+                new Vector2(crosshairIdleSize, crosshairIdleSize));
 
-            var promptObject = new GameObject("Prompt", typeof(RectTransform));
-            promptObject.transform.SetParent(canvasObject.transform, false);
-            prompt = promptObject.AddComponent<Text>();
-            prompt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            prompt.fontSize = fontSize;
-            prompt.alignment = TextAnchor.MiddleCenter;
-            prompt.horizontalOverflow = HorizontalWrapMode.Overflow;
-            prompt.raycastTarget = false;
+            prompt = HudFactory.CreateText("Prompt", canvasObject.transform, fontSize, TextAnchor.MiddleCenter);
             prompt.enabled = false;
-            Centre(prompt.rectTransform, new Vector2(0f, -48f), new Vector2(800f, 40f));
-            var shadow = promptObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.8f);
-            shadow.effectDistance = new Vector2(1.5f, -1.5f);
-        }
-
-        static void Centre(RectTransform rect, Vector2 offset, Vector2 size)
-        {
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = offset;
-            rect.sizeDelta = size;
+            HudFactory.Place(prompt.rectTransform, ScreenCentre, new Vector2(0f, -48f), new Vector2(800f, 40f));
         }
     }
 }
