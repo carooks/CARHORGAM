@@ -48,3 +48,7 @@ sysinfo.txt
 # City blockout generator output (copy the OBJ into Assets/ on your machine; *.obj/*.png are LFS)
 /Tools/CityBlockout/out/
 __pycache__/
+
+# Third-party store packs: imported locally from the purchased package, not committed (size + licence)
+/Assets/LeartesStudios/
+/Assets/LeartesStudios.meta
