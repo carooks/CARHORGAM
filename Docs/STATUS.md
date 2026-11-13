@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-10-22_
+_Last updated: 2026-11-13_
 
 ## Current phase: 2 — Core gameplay
 
@@ -55,6 +55,14 @@ the facility lights off and on. Rebuilt scene and player prefab committed.
 4. Press E: click sound, handle flips, every lamp inside goes dark and the buzzing stops.
    The prompt now reads "[E] Restore the power". Press E again to turn them back on.
 5. Step back, or look away: the prompt disappears. Press Esc: the prompt disappears too.
+
+### Real-scale Wadsworth blockout: generated, not yet checked in Unity
+
+- `Tools/CityBlockout/build_blockout.py` turns OpenStreetMap streets and Microsoft building
+  footprints into a 1:1 OBJ (roads as flat strips, buildings as extruded boxes) around the match
+  factory, plus a JSON list of every building. See [Tools/CityBlockout/README.md](../Tools/CityBlockout/README.md)
+  for import steps and known limits. Not in the Phase 1 scene yet; the compressed town stays until
+  this is verified.
 
 ### Known issues / risks
 

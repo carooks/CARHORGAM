@@ -44,3 +44,7 @@ sysinfo.txt
 # Burst / addressables generated
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# City blockout generator output (copy the OBJ into Assets/ on your machine; *.obj/*.png are LFS)
+/Tools/CityBlockout/out/
+__pycache__/
