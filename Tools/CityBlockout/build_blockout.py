@@ -379,21 +379,72 @@ def disc(obj, c, r, y, sides=10):
     obj.flat_poly(ring, y)
 
 
+def clip_segment(a, b, area):
+    """Liang-Barsky: the part of segment a-b inside the rectangle, or None."""
+    x0, x1, y0, y1 = area
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    t0, t1 = 0.0, 1.0
+    for p, q in ((-dx, a[0] - x0), (dx, x1 - a[0]), (-dy, a[1] - y0), (dy, y1 - a[1])):
+        if p == 0:
+            if q < 0:
+                return None
+            continue
+        t = q / p
+        if p < 0:
+            t0 = max(t0, t)
+        else:
+            t1 = min(t1, t)
+        if t0 > t1:
+            return None
+    return (a[0] + t0 * dx, a[1] + t0 * dy), (a[0] + t1 * dx, a[1] + t1 * dy)
+
+
+def clip_polygon(ring, area):
+    """Sutherland-Hodgman: cut a polygon to the build rectangle."""
+    x0, x1, y0, y1 = area
+    edges = [(lambda p: p[0] >= x0, lambda a, b: (x0, a[1] + (b[1] - a[1]) * (x0 - a[0]) / (b[0] - a[0]))),
+             (lambda p: p[0] <= x1, lambda a, b: (x1, a[1] + (b[1] - a[1]) * (x1 - a[0]) / (b[0] - a[0]))),
+             (lambda p: p[1] >= y0, lambda a, b: (a[0] + (b[0] - a[0]) * (y0 - a[1]) / (b[1] - a[1]), y0)),
+             (lambda p: p[1] <= y1, lambda a, b: (a[0] + (b[0] - a[0]) * (y1 - a[1]) / (b[1] - a[1]), y1))]
+    out = list(ring)
+    for inside, cross in edges:
+        src, out = out, []
+        for i in range(len(src)):
+            cur, prev = src[i], src[i - 1]
+            if inside(cur):
+                if not inside(prev):
+                    out.append(cross(prev, cur))
+                out.append(cur)
+            elif inside(prev):
+                out.append(cross(prev, cur))
+        if not out:
+            return []
+    return out
+
+
 def clip_polyline(pts, area, pad):
-    """Keep runs of a polyline that touch the area (segment-level, not exact clipping)."""
+    """Cut a polyline to the build area (shrunk by `pad`), returning the runs inside it."""
+    x0, x1, y0, y1 = area
+    box = (x0 + pad, x1 - pad, y0 + pad, y1 - pad)
     runs, cur = [], []
-    for i in range(len(pts)):
-        inside = in_area(pts[i], area, pad)
-        prev_in = i > 0 and in_area(pts[i - 1], area, pad)
-        next_in = i < len(pts) - 1 and in_area(pts[i + 1], area, pad)
-        if inside or prev_in or next_in:
-            cur.append(pts[i])
-        elif cur:
-            runs.append(cur)
-            cur = []
+    for i in range(len(pts) - 1):
+        seg = clip_segment(pts[i], pts[i + 1], box)
+        if seg is None:
+            if cur:
+                runs.append(cur)
+                cur = []
+            continue
+        a, b = seg
+        if cur and math.hypot(cur[-1][0] - a[0], cur[-1][1] - a[1]) < 1e-6:
+            cur.append(b)
+        else:
+            if cur:
+                runs.append(cur)
+            cur = [a, b]
     if cur:
         runs.append(cur)
-    return [r for r in runs if len(r) >= 2]
+    return [r for r in runs if len(r) >= 2 and sum(
+        math.hypot(r[k + 1][0] - r[k][0], r[k + 1][1] - r[k][1]) for k in range(len(r) - 1)) > 0.5]
 
 
 def build(args):
@@ -426,12 +477,12 @@ def build(args):
             except ValueError:
                 pass
         pts = [nodes[r] for r in refs]
-        runs = clip_polyline(pts, area, 0)
+        runs = clip_polyline(pts, area, 5.0)
         if not runs:
             continue
         groups[mat].append((tags.get("name", hw), runs, width, y))
         for r in refs:
-            if in_area(nodes[r], area):
+            if in_area(nodes[r], area, -6.0):  # stay clear of the edge so patches don't overhang
                 node_use.setdefault(r, []).append((width, y))
     for mat, items in groups.items():
         obj.begin(mat, mat)
@@ -451,14 +502,14 @@ def build(args):
     obj.begin("Parking", "Parking")
     for wid, tags, refs in ways:
         if tags.get("amenity") == "parking" and refs[0] == refs[-1]:
-            ring = clean_ring([nodes[r] for r in refs])
-            if len(ring) >= 3 and any(in_area(p, area) for p in ring):
+            ring = clean_ring(clip_polygon(clean_ring([nodes[r] for r in refs]), area))
+            if len(ring) >= 3:
                 obj.flat_poly(ring, 0.02)
     obj.begin("Water", "Water")
     for wid, tags, refs in ways:
         if (tags.get("natural") == "water" or "water" in tags) and refs[0] == refs[-1]:
-            ring = clean_ring([nodes[r] for r in refs])
-            if len(ring) >= 3 and any(in_area(p, area) for p in ring):
+            ring = clean_ring(clip_polygon(clean_ring([nodes[r] for r in refs]), area))
+            if len(ring) >= 3:
                 obj.flat_poly(ring, 0.01)
 
     # Buildings: OSM first (better shapes, names), then Microsoft where OSM has nothing
@@ -468,8 +519,8 @@ def build(args):
         if "building" not in tags or refs[0] != refs[-1]:
             continue
         ring = clean_ring([nodes[r] for r in refs])
-        if len(ring) < 3 or not in_area(centroid(ring), area):
-            continue
+        if len(ring) < 3 or not all(in_area(p, area) for p in ring):
+            continue  # only whole buildings; ones cut by the map edge are left out
         h = None
         if "height" in tags:
             try:
@@ -489,7 +540,7 @@ def build(args):
         if len(ring) < 3 or abs(signed_area(ring)) < 12:
             continue
         c = centroid(ring)
-        if not in_area(c, area):
+        if not all(in_area(p, area) for p in ring):
             continue
         if any(point_in_poly(c, p) or point_in_poly(centroid(p), ring) for p in osm_polys):
             continue  # already have it from OSM

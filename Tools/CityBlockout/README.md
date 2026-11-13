@@ -71,7 +71,7 @@ degrees, so grow it in steps.
 
 ## Known limits (be honest with yourself about these)
 
-- **Building outlines come mostly from Microsoft's machine-traced footprints** (450 of 478 in the
+- **Building outlines come mostly from Microsoft's machine-traced footprints** (441 of 466 in the
   default area). OpenStreetMap only has about 28 buildings mapped here. The traced outlines are good
   for houses but merge big complexes: the whole match factory is one blob.
 - **Heights are rough.** Microsoft's estimates put the factory at about 7 m, so the script overrides it to 14 m
@@ -79,9 +79,10 @@ degrees, so grow it in steps.
 - **Footprints are modern.** Buildings demolished before the imagery (e.g. Franklin Elementary)
   are missing, and anything built since the game's era is present.
 - Road widths are guesses by road class. There are no sidewalks, curbs or lane markings.
-- Roads that leave the area keep their last segment, so a few stick out past the ground edge.
-- Not yet checked inside Unity. The C# builder couldn't be compiled in the cloud (no Unity there), and the mesh
-  winding was checked with Python tests and a Python renderer only.
+- Roads and lots are cut at the map edge; buildings that cross it are left out.
+- Tested in Unity 6000.0.58f2 in batch mode: it compiles, builds the scene, and test renders show solid
+  buildings at sensible scale. Not yet walked in Play mode.
+- The pond uses the existing night-water material, which is nearly black from above.
 - Water has no collider, so you can walk across the pond.
 
 ## Credits (must ship in the game's credits)

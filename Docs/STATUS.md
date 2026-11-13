@@ -64,7 +64,8 @@ the facility lights off and on. Rebuilt scene and player prefab committed.
   for steps and known limits.
 - Menu **Horror Game > Build Wadsworth Blockout Scene** builds a separate scene,
   `Scenes/Wadsworth_Blockout.unity`, from `Data/Wadsworth/wadsworth_blockout.json`: real streets,
-  478 buildings, colliders, map edges, Phase 1 lighting, the player on Route 94. Not compiled or run yet.
+  466 buildings, colliders, map edges, Phase 1 lighting, the player on Route 94. Compiled and built
+  cleanly in Unity 6000.0.58f2 on 2026-11-13 (batch mode; test renders show solid buildings, correct scale).
   The Phase 1 scene and its compressed town are unchanged until this is verified.
 
 ### Known issues / risks
