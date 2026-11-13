@@ -22,8 +22,9 @@ Running the script also writes a top-down `out/wadsworth_preview.png` (not commi
 | `Parking`, `Water` | Mapped parking lots and the pond |
 | `Bldg_0000` ... | One object per building, biggest first, walls + roof as two submeshes |
 
-`Bldg_0000` is the match factory complex and `Bldg_0001` is the long building across Route 94
-(The Static's). Named OSM buildings carry their name, e.g. `Bldg_0002_Central_Intermediate_School`.
+`Bldg_0000_Match_Factory` is the factory complex (raised to 14 m) and `Bldg_0001_Static_Building`
+is the long building across Route 94. Landmarks are matched by location in the script's `LANDMARKS` list,
+so add more there (a point inside the building, an optional height, a label). Named OSM buildings carry their name, e.g. `Bldg_0002_Central_Intermediate_School`.
 
 `wadsworth_buildings.json` lists every building with its centre, oriented size, rotation,
 height and outline, in the same coordinates. A later editor script can use it to swap boxes
@@ -35,30 +36,29 @@ for kit houses automatically.
 - In Unity: +X east, +Z north, +Y up. Route 94 runs along Z at X ≈ 0. The factory is at X ≈ -100.
 - The ground is flat. Real Wadsworth has hills; there's no elevation data in this.
 
-## Import into Unity (Windows)
+## Open it in Unity (Windows)
 
-1. Make a folder `Assets/_Project/Blockout/Wadsworth/` and copy in `wadsworth_blockout.obj`
-   and `wadsworth_blockout.mtl` (from `Tools/CityBlockout/out/`, or from the project files).
-2. Click the `.obj` in the Project window. In the Inspector, **Model** tab:
-   - Scale Factor: `1`. Tick **Generate Colliders**. Click **Apply**.
-3. **Materials** tab: under *Remapped Materials*, point each slot at an existing project material
-   so nothing renders pink in URP: `Ground` → `M_Ground`, `RoadMain`/`RoadStreet`/`RoadService`/`Parking` → `M_Asphalt`,
-   `Building` → `M_Concrete`, `BuildingLandmark` → `M_FacilityWall`, `Roof` → `M_Roof`,
-   `Water` → `M_PondWater`. Click **Apply**.
-4. Make a new scene (File > New Scene > Basic (URP)), drag the `.obj` in at position (0,0,0),
-   then drag `Assets/_Project/Prefabs/Player.prefab` in at about (8, 1, 0) (on Route 94,
-   in front of the factory). Delete the default Main Camera. Press Play and walk.
-5. Sanity check: a house should be roughly 3.5 times the player's height (about 7 m).
-   If everything is tiny or huge, the scale factor is wrong; set it so houses are about 7 m.
+The easy way, with nothing to copy:
 
-Commit the `.obj`/`.mtl` from your machine (they go through Git LFS, which the cloud can't upload).
+1. Pull this branch and open the project. Wait for scripts to compile (no red errors in the Console).
+2. Menu **Horror Game > Build Wadsworth Blockout Scene**. It reads
+   `Assets/_Project/Data/Wadsworth/wadsworth_blockout.json` and creates
+   `Assets/_Project/Scenes/Wadsworth_Blockout.unity` and `Assets/_Project/Meshes/Wadsworth_Blockout.asset`,
+   using the project's existing materials, with colliders on the ground and buildings, invisible walls at the
+   map edge, the same night lighting as Phase 1 (lighter fog) and the player standing on Route 94 facing the factory.
+3. Press Play and walk. The Phase 1 scene is not touched.
+4. Commit the new scene and mesh asset from your machine.
+
+The OBJ route (if you'd rather have a model file): copy `out/wadsworth_blockout.obj` and `.mtl` into
+`Assets/`, tick **Generate Colliders** in the Model tab, remap the materials in the Materials tab to the
+project's `M_` materials, and drag it into a scene at (0,0,0). Commit it from your machine (OBJ goes through LFS).
 
 ## Rebuild or grow the area
 
 Needs Python 3 (Pillow optional, for the preview image).
 
 ```
-python Tools/CityBlockout/build_blockout.py                  # rebuild from cached data
+python Tools/CityBlockout/build_blockout.py                  # rebuild from cached data (also rewrites the Unity JSON)
 python Tools/CityBlockout/build_blockout.py --half-width 600 --north 800 --south -900
 python Tools/CityBlockout/build_blockout.py --fetch          # re-download map data first
 ```
@@ -74,13 +74,15 @@ degrees, so grow it in steps.
 - **Building outlines come mostly from Microsoft's machine-traced footprints** (450 of 478 in the
   default area). OpenStreetMap only has about 28 buildings mapped here. The traced outlines are good
   for houses but merge big complexes: the whole match factory is one blob.
-- **Heights are rough.** Microsoft's height estimates put the factory at about 7 m; the real
-  wings are three storeys (about 14 m). Houses default to 6 to 7 m. Expect to hand-fix landmarks.
+- **Heights are rough.** Microsoft's estimates put the factory at about 7 m, so the script overrides it to 14 m
+  (three storeys) as one flat-topped block. Most buildings come out 3.5 to 7 m (median 5 m). Expect to hand-fix landmarks.
 - **Footprints are modern.** Buildings demolished before the imagery (e.g. Franklin Elementary)
   are missing, and anything built since the game's era is present.
 - Road widths are guesses by road class. There are no sidewalks, curbs or lane markings.
 - Roads that leave the area keep their last segment, so a few stick out past the ground edge.
-- Not yet checked inside Unity: generated and checked with a Python renderer only.
+- Not yet checked inside Unity. The C# builder couldn't be compiled in the cloud (no Unity there), and the mesh
+  winding was checked with Python tests and a Python renderer only.
+- Water has no collider, so you can walk across the pond.
 
 ## Credits (must ship in the game's credits)
 

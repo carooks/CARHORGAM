@@ -12,5 +12,10 @@ namespace HorrorGame.EditorTools
 
         public const string Phase1Scene = Scenes + "/Phase1_Graybox.unity";
         public const string PlayerPrefab = Prefabs + "/Player.prefab";
+
+        // Real-scale Wadsworth blockout (data written by Tools/CityBlockout/build_blockout.py)
+        public const string WadsworthScene = Scenes + "/Wadsworth_Blockout.unity";
+        public const string WadsworthData = Root + "/Data/Wadsworth/wadsworth_blockout.json";
+        public const string WadsworthMeshes = Meshes + "/Wadsworth_Blockout.asset";
     }
 }

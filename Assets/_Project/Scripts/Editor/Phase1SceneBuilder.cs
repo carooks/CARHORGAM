@@ -64,7 +64,7 @@ namespace HorrorGame.EditorTools
             Debug.Log("[Horror Game] Built " + ProjectPaths.Phase1Scene + ". Press Play to walk around.");
         }
 
-        static void ConfigureAtmosphere()
+        internal static void ConfigureAtmosphere()
         {
             RenderSettings.skybox = null;
             RenderSettings.ambientMode = AmbientMode.Flat;
@@ -76,7 +76,7 @@ namespace HorrorGame.EditorTools
             RenderSettings.defaultReflectionMode = DefaultReflectionMode.Custom;
         }
 
-        static void CreateMoonlight()
+        internal static void CreateMoonlight()
         {
             var moon = new GameObject("Moonlight");
             moon.transform.rotation = Quaternion.Euler(38f, 150f, 0f);
@@ -89,7 +89,7 @@ namespace HorrorGame.EditorTools
             RenderSettings.sun = light;
         }
 
-        static void CreatePostProcessVolume(VolumeProfile profile)
+        internal static void CreatePostProcessVolume(VolumeProfile profile)
         {
             var go = new GameObject("PostProcessVolume");
             var volume = go.AddComponent<Volume>();
@@ -97,7 +97,7 @@ namespace HorrorGame.EditorTools
             volume.sharedProfile = profile;
         }
 
-        static void CreateAmbience()
+        internal static void CreateAmbience()
         {
             var go = new GameObject("Ambience_Drone");
             var ambience = go.AddComponent<AmbientSound>();

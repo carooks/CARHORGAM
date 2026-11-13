@@ -61,8 +61,11 @@ the facility lights off and on. Rebuilt scene and player prefab committed.
 - `Tools/CityBlockout/build_blockout.py` turns OpenStreetMap streets and Microsoft building
   footprints into a 1:1 OBJ (roads as flat strips, buildings as extruded boxes) around the match
   factory, plus a JSON list of every building. See [Tools/CityBlockout/README.md](../Tools/CityBlockout/README.md)
-  for import steps and known limits. Not in the Phase 1 scene yet; the compressed town stays until
-  this is verified.
+  for steps and known limits.
+- Menu **Horror Game > Build Wadsworth Blockout Scene** builds a separate scene,
+  `Scenes/Wadsworth_Blockout.unity`, from `Data/Wadsworth/wadsworth_blockout.json`: real streets,
+  478 buildings, colliders, map edges, Phase 1 lighting, the player on Route 94. Not compiled or run yet.
+  The Phase 1 scene and its compressed town are unchanged until this is verified.
 
 ### Known issues / risks
 

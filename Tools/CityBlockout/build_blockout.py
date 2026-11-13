@@ -64,6 +64,13 @@ DEFAULT_HEIGHT = {
     "commercial": 6.0, "industrial": 9.0, "warehouse": 8.0, "school": 10.0,
     "church": 12.0, "apartments": 10.0,
 }
+# Known places: (a point inside the building in local metres, height override or None, label).
+# Matched by location, so they survive changes to the build area.
+LANDMARKS = [
+    ((-142.0, 73.0), 14.0, "Match Factory"),        # three-storey brick wings; data says ~7 m
+    ((69.0, 230.0), None, "Static Building"),       # long building with the smokestack, across 94
+]
+
 LEVEL_HEIGHT = 3.2
 MIN_HEIGHT, MAX_HEIGHT = 2.5, 25.0
 
@@ -247,13 +254,16 @@ class Obj:
     def __init__(self):
         self.v = []
         self.objects = []  # (name, [(material, [tri vertex-index triples]), ...])
+        self.unity = []    # (name, [(material, [flat x,y,z list, 3 vertices per triangle]), ...])
 
     def begin(self, name, material):
         self.objects.append((name, [(material, [])]))
+        self.unity.append((name, [(material, [])]))
 
     def use(self, material):
         """Switch material inside the current object (one GameObject, several submeshes)."""
         self.objects[-1][1].append((material, []))
+        self.unity[-1][1].append((material, []))
 
     def tri(self, a, b, c, want_normal):
         A, B, C = [(-p[0], p[1], p[2]) for p in (a, b, c)]  # file space
@@ -266,6 +276,23 @@ class Obj:
         base = len(self.v)
         self.v.extend([A, B, C])
         self.objects[-1][1][-1][1].append((base + 1, base + 2, base + 3))
+        # Unity space (x east, y up, z north): Unity's front face is the one where
+        # Vector3.Cross(b - a, c - a) points at the viewer, so order the triangle that way.
+        u = [b[i] - a[i] for i in range(3)]
+        v = [c[i] - a[i] for i in range(3)]
+        n = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+        if sum(n[i] * want_normal[i] for i in range(3)) < 0:
+            b, c = c, b
+        flat = self.unity[-1][1][-1][1]
+        for p in (a, b, c):
+            flat.extend((round(p[0], 2), round(p[1], 3), round(p[2], 2)))
+
+    def write_unity_json(self, path, meta):
+        """Mesh data for the Unity editor builder (HorrorGame > Build Wadsworth Blockout)."""
+        objects = [{"name": name, "parts": [{"material": m, "v": v} for m, v in parts if v]}
+                   for name, parts in self.unity if any(v for _, v in parts)]
+        with open(path, "w") as f:
+            json.dump(dict(meta, objects=objects), f, separators=(",", ":"))
 
     def quad(self, a, b, c, d, want_normal):
         self.tri(a, b, c, want_normal)
@@ -479,10 +506,17 @@ def build(args):
     landmarks = set(args.landmark or [])
     sidecar = []
     for n, b in enumerate(sorted(buildings, key=lambda b: (-abs(signed_area(b["ring"]))))):
-        ring, h = b["ring"], b["height"]
+        ring = b["ring"]
+        is_landmark = n in landmarks
+        for point, height, label in LANDMARKS:
+            if point_in_poly(point, ring):
+                b["name"], is_landmark = label, True
+                if height:
+                    b["height"] = height
+        h = b["height"]
         label = "".join(ch if ch.isalnum() else "_" for ch in b["name"])[:40].strip("_")
         name = f"Bldg_{n:04d}" + (f"_{label}" if label else "")
-        mat = "BuildingLandmark" if n in landmarks else "Building"
+        mat = "BuildingLandmark" if is_landmark else "Building"
         obj.begin(name, mat)
         cx, cy = centroid(ring)
         for i in range(len(ring)):
@@ -507,6 +541,13 @@ def build(args):
     with open(os.path.join(args.out, "wadsworth_buildings.json"), "w") as f:
         json.dump({"origin": {"lat": ORIGIN_LAT, "lon": ORIGIN_LON, "note": "x east, y north, metres"},
                    "area": {"xMin": x0, "xMax": x1, "yMin": y0, "yMax": y1}, "buildings": sidecar}, f, indent=1)
+    if args.unity_json:
+        os.makedirs(os.path.dirname(args.unity_json), exist_ok=True)
+        obj.write_unity_json(args.unity_json, {
+            "attribution": "Map data (c) OpenStreetMap contributors, ODbL. Microsoft Global ML Building Footprints, ODbL.",
+            "originLat": ORIGIN_LAT, "originLon": ORIGIN_LON,
+            "xMin": x0, "xMax": x1, "zMin": y0, "zMax": y1})
+        print(f"Unity data: {args.unity_json} ({os.path.getsize(args.unity_json) / 1e6:.1f} MB)")
     print(f"Roads: {road_count} segments, buildings: {len(buildings)} "
           f"({sum(b['src'] == 'osm' for b in buildings)} OSM, {sum(b['src'] == 'ms' for b in buildings)} Microsoft)")
     print(f"OBJ: {nv} vertices, {nt} triangles -> {obj_path} ({os.path.getsize(obj_path) / 1e6:.1f} MB)")
@@ -565,6 +606,9 @@ def main():
     ap.add_argument("--landmark", type=int, action="append", help="building index to colour as a landmark")
     ap.add_argument("--preview-scale", type=float, default=1.5, help="pixels per metre in the preview")
     ap.add_argument("--out", default=os.path.join(HERE, "out"))
+    ap.add_argument("--unity-json", default=os.path.join(
+        HERE, "..", "..", "Assets", "_Project", "Data", "Wadsworth", "wadsworth_blockout.json"),
+        help="mesh data for the Unity menu HorrorGame > Build Wadsworth Blockout ('' to skip)")
     args = ap.parse_args()
     if args.fetch:
         fetch(args)
