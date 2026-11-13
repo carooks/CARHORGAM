@@ -458,7 +458,14 @@ def build(args):
     # Ground
     x0, x1, y0, y1 = area
     obj.begin("Ground", "Ground")
-    obj.quad((x0, 0, y0), (x1, 0, y0), (x1, 0, y1), (x0, 0, y1), (0, 1, 0))
+    # 50 m tiles: one huge quad makes PhysX warn about triangles over 500 units in the collider
+    tile = 50.0
+    nx, ny = max(1, math.ceil((x1 - x0) / tile)), max(1, math.ceil((y1 - y0) / tile))
+    for i in range(nx):
+        for j in range(ny):
+            ax, bx = x0 + (x1 - x0) * i / nx, x0 + (x1 - x0) * (i + 1) / nx
+            ay, by = y0 + (y1 - y0) * j / ny, y0 + (y1 - y0) * (j + 1) / ny
+            obj.quad((ax, 0, ay), (bx, 0, ay), (bx, 0, by), (ax, 0, by), (0, 1, 0))
 
     # Roads
     node_use = {}
