@@ -110,11 +110,13 @@ Verified 2026-11-14 on Windows in batch mode: compiles, 11/11 play-mode tests pa
 - The Foreman is also in the match factory interior scene (PR #4), patrolling its 18 AI_Waypoints.
   The factory is much bigger than the Phase 1 facility, so his sight and hearing ranges may need retuning there.
 
-### Side milestone: match factory interior (builds; not hand-tested)
+### Side milestone: match factory at night (expanded; not yet built in Unity)
 
-Separate generated scene with a slice of the match factory (receiving room, machine hall, burnt dip
-room, stairwell, Foreman's office) and a reusable pixel filter. See
-[MatchFactoryInterior.md](MatchFactoryInterior.md). Compiles and builds in Unity 6000.0.58f2 (batch); not yet play-tested by hand.
+Separate generated scene of the match factory at night: two brick wings, a courtyard, a 120 m
+machine hall, a warehouse, the Foreman's office, the dip room and the stairwell. It's dressed
+with Synty props when the packs are imported locally (they're git-ignored) and has a reusable
+pixel filter. See [MatchFactoryInterior.md](MatchFactoryInterior.md). The first, smaller slice
+compiled and built in Unity 6000.0.58f2. The expansion still needs a Unity build.
 
 ### Next milestone
 

@@ -57,10 +57,10 @@ namespace HorrorGame.EditorTools
 
         // ------------------------------------------------------------------ match factory interior
 
-        /// <summary>Walkable box for the factory scene: yard, hall, dip room, stairwell and the raised office (see Docs/MatchFactoryInterior.md).</summary>
-        static readonly Bounds FactoryBounds = new Bounds(new Vector3(29.5f, 4f, 4f), new Vector3(70f, 12f, 72f));
+        /// <summary>Walkable box for the factory scene, owned by the factory builder.</summary>
+        static Bounds FactoryBounds => FactoryInteriorBuilder.NavBounds;
         /// <summary>Where the player starts in the factory scene; the Foreman spawns at the ground waypoint farthest from it.</summary>
-        static readonly Vector3 FactoryPlayerSpawn = new Vector3(7f, 0f, -22f);
+        static Vector3 FactoryPlayerSpawn => FactoryInteriorBuilder.PlayerSpawn;
 
         [MenuItem("Horror Game/Add or Replace Foreman in Match Factory", priority = 22)]
         static void AddToFactoryMenu()
