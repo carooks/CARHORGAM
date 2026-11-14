@@ -178,6 +178,12 @@ namespace HorrorGame.EditorTools
             root.AddComponent<MonsterBrain>();
             root.AddComponent<MonsterPresentation>();
 
+            if (TryAddModel(root, capsule))
+            {
+                eyes = new List<Object>(); // the model has its own eyes; no glow
+                return root;
+            }
+
             // Graybox body: too tall, hunched, arms hanging past the knees, still wearing his hard hat.
             var body = GrayboxKit.Group("Body", root.transform).transform;
             body.localPosition = Vector3.zero;
@@ -205,6 +211,41 @@ namespace HorrorGame.EditorTools
                 eyes.Add(eye.GetComponent<Renderer>());
             }
             return root;
+        }
+
+        /// <summary>
+        /// Chad's rigged Foreman model (Meshy + Mixamo, imported with glTFast). It is kept out of git
+        /// (too big, see .gitignore), so on a machine without it the graybox body is used instead.
+        /// </summary>
+        public const string ForemanModelPath = "Assets/_Project/Art/Foreman/Foreman.glb";
+        /// <summary>The model's height as exported, in metres.</summary>
+        const float ModelNativeHeight = 1.7f;
+        /// <summary>How tall the Foreman stands in game. Taller than any player on purpose.</summary>
+        const float ForemanHeight = 2.3f;
+
+        static bool TryAddModel(GameObject root, CapsuleCollider capsule)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(ForemanModelPath);
+            if (asset == null)
+                return false;
+
+            var model = (GameObject)PrefabUtility.InstantiatePrefab(asset);
+            model.name = "Model";
+            model.transform.SetParent(root.transform, false);
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+            model.transform.localScale = Vector3.one * (ForemanHeight / ModelNativeHeight);
+            foreach (var collider in model.GetComponentsInChildren<Collider>(true))
+                Object.DestroyImmediate(collider);
+            foreach (var t in model.GetComponentsInChildren<Transform>(true))
+                GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
+
+            capsule.height = ForemanHeight;
+            capsule.center = new Vector3(0f, ForemanHeight * 0.5f, 0f);
+
+            var animation = root.AddComponent<MonsterAnimation>();
+            SerializedFields.Set(animation, "model", model.transform);
+            return true;
         }
 
         /// <summary>A visual-only primitive: no collider, and not static, because the monster moves.</summary>
