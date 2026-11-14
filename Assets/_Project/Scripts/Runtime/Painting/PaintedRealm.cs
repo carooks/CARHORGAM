@@ -168,6 +168,7 @@ namespace HorrorGame.Painting
         /// Command-line shortcuts for test runs of the exe (screenshots, quick checks):
         ///   -enterPainting   start inside the painting
         ///   -freeVoices      also free every painted-over voice at once (the real church opens)
+        ///   -showEntity      the thing stands up in front of you, reaching (to look at it)
         /// </summary>
         void Start()
         {
@@ -180,6 +181,22 @@ namespace HorrorGame.Painting
             Enter(motor.gameObject, FindFirstObjectByType<HauntedPainting>());
             if (Array.IndexOf(args, "-freeVoices") >= 0)
                 StartCoroutine(FreeAllWhenInside());
+            if (Array.IndexOf(args, "-showEntity") >= 0)
+                StartCoroutine(ShowEntityWhenInside());
+        }
+
+        IEnumerator ShowEntityWhenInside()
+        {
+            while (State != RealmState.Inside || busy)
+                yield return null;
+            yield return new WaitForSeconds(1f);
+            if (entity == null || player == null)
+                yield break;
+            var forward = player.transform.forward;
+            forward.y = 0f;
+            entity.EmergeAt(player.transform.position + forward.normalized * 6f + Vector3.Cross(Vector3.up, forward.normalized) * 1.5f);
+            if (entity.Poser != null)
+                entity.Poser.Snap(EntityPoser.Pose.Reach, player.transform);
         }
 
         IEnumerator FreeAllWhenInside()
