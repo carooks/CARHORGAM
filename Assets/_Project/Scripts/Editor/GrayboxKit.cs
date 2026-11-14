@@ -180,7 +180,7 @@ namespace HorrorGame.EditorTools
         // Sodium street lamp: a wide downward spot so it throws a pool of light on the road
         // (about 9 m radius, brightest under the head) rather than a point that only lights itself.
         public const float StreetLampHeight = 7f;
-        public const float StreetLampIntensity = 80f;
+        public const float StreetLampIntensity = 240f;
         public const float StreetLampRange = 18f;
         public const float StreetLampAngle = 120f;
         public static readonly Color SodiumColor = new Color(1f, 0.62f, 0.3f);
@@ -207,7 +207,7 @@ namespace HorrorGame.EditorTools
                 var light = SpotLight("Light", lamp, head + Vector3.down * 0.2f, Quaternion.Euler(90f, 0f, 0f),
                     SodiumColor, StreetLampIntensity, StreetLampRange, StreetLampAngle);
                 // Soft wide edge, bright centre: the pool fades out instead of ending in a hard ring.
-                light.innerSpotAngle = StreetLampAngle * 0.35f;
+                light.innerSpotAngle = StreetLampAngle * 0.5f;
             }
             return lamp.gameObject;
         }

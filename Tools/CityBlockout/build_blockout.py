@@ -58,10 +58,10 @@ ROAD_CLASSES = {
     "service": (4.0, 0.03, "RoadService"),
 }
 # Street lamps: spacing along the road (metres) by road material; service roads get none.
-LAMP_SPACING = {"RoadMain": 32.0, "RoadStreet": 45.0}
+LAMP_SPACING = {"RoadMain": 28.0, "RoadStreet": 40.0}
 LAMP_SETBACK = 1.0      # pole distance outside the road edge
 LAMP_MIN_GAP = 14.0     # skip a lamp this close to another (overlapping ways, junctions)
-LAMP_DEAD_EVERY = 4     # every Nth lamp is dead, for unlit stretches
+LAMP_DEAD_EVERY = 5     # every Nth lamp is dead, for unlit stretches
 SERVICE_WIDTHS = {"parking_aisle": 5.0, "driveway": 3.0, "alley": 4.0}
 
 DEFAULT_HEIGHT = {
