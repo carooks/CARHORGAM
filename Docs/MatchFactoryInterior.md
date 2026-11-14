@@ -40,6 +40,6 @@ along the routes for a future patrol; nothing reads them yet.
 
 ## Known gaps
 
-- Not yet opened in Unity: compile and layout unverified until tested on Windows.
+- Verified 2026-11-14 on Windows (batch build, test renders, player build launches). Not yet play-tested by hand; the breaker starting OFF is unverified in Play mode.
 - No doors open, nothing to pick up, no monster here yet.
 - Rebuilding the Phase 1 scene resets Build Settings to Phase 1 only; rebuild this scene to re-add it.

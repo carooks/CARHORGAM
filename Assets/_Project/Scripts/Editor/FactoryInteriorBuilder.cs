@@ -754,7 +754,8 @@ namespace HorrorGame.EditorTools
             // Stacks of splint/paper rolls in the side aisles, as in the old photo. One stack has fallen.
             Vector3[] stacks =
             {
-                new Vector3(6f, 0f, 18.6f), new Vector3(7.3f, 0f, 18.7f), new Vector3(20f, 0f, 18.6f),
+                // The first two sit just east of the dip-room doorway (north wall, X 5.8..8.2), clear of it.
+                new Vector3(9.6f, 0f, 18.6f), new Vector3(10.9f, 0f, 18.7f), new Vector3(20f, 0f, 18.6f),
                 new Vector3(33f, 0f, 18.6f), new Vector3(26f, 0f, 1.5f), new Vector3(27.3f, 0f, 1.6f), new Vector3(48f, 0f, 1.5f),
             };
             for (int s = 0; s < stacks.Length; s++)
