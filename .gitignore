@@ -34,6 +34,7 @@
 Thumbs.db
 
 # Builds and crash reports
+/[Bb]uilds/
 *.apk
 *.aab
 *.unitypackage
