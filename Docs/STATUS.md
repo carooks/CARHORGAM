@@ -116,6 +116,14 @@ Separate generated scene with a slice of the match factory (receiving room, mach
 room, stairwell, Foreman's office) and a reusable pixel filter. See
 [MatchFactoryInterior.md](MatchFactoryInterior.md). Compiles and builds in Unity 6000.0.58f2 (batch); not yet play-tested by hand.
 
+### Side milestone: haunted painting, the buried choir (builds; not hand-played)
+
+Step into a cursed portrait: a fogged dusk field where a choir buried to the neck sings. The world
+only finishes painting where you look. Free the painted-over voices (the song leads you), avoid the
+thing that hates harmony (it walks to sounds; stand still and it passes), find the one real church
+and let the full chord destroy it. Test scene, oil-paint filter, voice filter, 6 play-mode tests.
+See [HauntedPainting.md](HauntedPainting.md).
+
 ### Next milestone
 
 After the Foreman is verified: Phase 3 milestone 2, environmental events and randomised scares,

@@ -21,6 +21,8 @@ namespace HorrorGame.Audio
         MonsterBreath,
         /// <summary>Harsh rising shriek, played when a monster starts chasing.</summary>
         Screech,
+        /// <summary>One voice of a choir holding a long "ooh" (220 Hz, slow vibrato). Pitch it for other notes.</summary>
+        ChoirVoice,
     }
 
     /// <summary>
@@ -48,6 +50,7 @@ namespace HorrorGame.Audio
                 case ProceduralSound.HeavyStep: clip = CreateHeavyStep(); break;
                 case ProceduralSound.MonsterBreath: clip = CreateBreath(); break;
                 case ProceduralSound.Screech: clip = CreateScreech(); break;
+                case ProceduralSound.ChoirVoice: clip = CreateChoirVoice(); break;
                 default: clip = CreateClick(); break;
             }
             Cache[sound] = clip;
@@ -104,6 +107,34 @@ namespace HorrorGame.Audio
                 raw[i] = saw * 0.25f + Sine(240f, t) * 0.1f + crackle;
             }
             return Finish("ElectricalBuzz", raw, seconds * SampleRate, 0.5f, true);
+        }
+
+        static AudioClip CreateChoirVoice()
+        {
+            const int seconds = 4;
+            const float f0 = 220f;
+            var rng = new System.Random(5150);
+            float breath = 0f, phase = 0f;
+            float[] raw = new float[seconds * SampleRate + SampleRate / 2];
+            for (int i = 0; i < raw.Length; i++)
+            {
+                float t = (float)i / SampleRate;
+                // Vibrato that drifts in and out, integrated so the pitch bends smoothly.
+                float vibrato = 1f + 0.006f * Mathf.Sin(2f * Mathf.PI * 5.3f * t) * (0.6f + 0.4f * Mathf.Sin(2f * Mathf.PI * 0.25f * t));
+                phase += f0 * vibrato / SampleRate;
+                float sample = 0f;
+                // Harmonics shaped by "oo" vowel formants (about 300 Hz and 870 Hz).
+                for (int k = 1; k <= 12; k++)
+                {
+                    float f = f0 * k;
+                    float formant = Mathf.Exp(-Mathf.Pow((f - 300f) / 160f, 2f)) + 0.35f * Mathf.Exp(-Mathf.Pow((f - 870f) / 220f, 2f));
+                    sample += Mathf.Sin(2f * Mathf.PI * phase * k) * (formant + 0.02f) / k;
+                }
+                breath += ((float)(rng.NextDouble() * 2.0 - 1.0) - breath) * 0.05f;
+                float swell = 0.85f + 0.15f * Mathf.Sin(2f * Mathf.PI * t / seconds);
+                raw[i] = (sample * 0.5f + breath * 0.08f) * swell;
+            }
+            return Finish("ChoirVoice", raw, seconds * SampleRate, 0.5f, true);
         }
 
         static AudioClip CreateClick()
