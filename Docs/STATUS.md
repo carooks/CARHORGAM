@@ -62,6 +62,12 @@ the facility lights off and on. Rebuilt scene and player prefab committed.
   or too bright on your monitor.
 - The town is a compressed block-out, not to scale.
 
+### Side milestone: match factory interior (unverified)
+
+Separate generated scene with a slice of the match factory (receiving room, machine hall, burnt dip
+room, stairwell, Foreman's office) and a reusable pixel filter. See
+[MatchFactoryInterior.md](MatchFactoryInterior.md). Not yet opened in Unity.
+
 ### Next milestone
 
 Phase 2, milestone 2: collectible objects with configurable values (scrap items built on
