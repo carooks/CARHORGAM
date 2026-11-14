@@ -116,13 +116,13 @@ Separate generated scene with a slice of the match factory (receiving room, mach
 room, stairwell, Foreman's office) and a reusable pixel filter. See
 [MatchFactoryInterior.md](MatchFactoryInterior.md). Compiles and builds in Unity 6000.0.58f2 (batch); not yet play-tested by hand.
 
-### Side milestone: haunted painting (in progress)
+### Side milestone: haunted painting, the buried choir (builds; not hand-played)
 
-Step into a cursed portrait: a dusk field with a choir buried to the neck. The world only
-finishes painting where you look. While the choir sings you're safe and their heads point the
-way; when they stop, something stands up in the wet paint behind you and can only move where
-you aren't looking. Burn three easels, then escape through the frame. Test scene, oil-paint
-filter, 4 play-mode tests. See [HauntedPainting.md](HauntedPainting.md).
+Step into a cursed portrait: a fogged dusk field where a choir buried to the neck sings. The world
+only finishes painting where you look. Free the painted-over voices (the song leads you), avoid the
+thing that hates harmony (it walks to sounds; stand still and it passes), find the one real church
+and let the full chord destroy it. Test scene, oil-paint filter, voice filter, 6 play-mode tests.
+See [HauntedPainting.md](HauntedPainting.md).
 
 ### Next milestone
 

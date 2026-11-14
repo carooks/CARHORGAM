@@ -7,14 +7,15 @@ using UnityEngine.UI;
 namespace HorrorGame.Painting
 {
     /// <summary>
-    /// The world inside a haunted painting. It is built in the same scene as the painting, far away
-    /// from everything else, so "entering" is a teleport plus a change of atmosphere: fog, ambient
-    /// light, the pixel filter off and the oil-paint filter on. Leaving puts everything back.
+    /// The pocket world inside a cursed painting. It is built in the same scene as the painting, far
+    /// away from everything else, so "entering" is a teleport plus a change of atmosphere: fog,
+    /// ambient light, the pixel filter off and the oil-paint filter on. Leaving puts everything back.
     ///
-    /// You are trapped: the frame you came through will not open. Burn every <see cref="BanishAnchor"/>
-    /// and the frame opens, the entity goes berserk, and you have to run back to the frame to escape.
-    /// Escaping breaks the curse: the entity is gone and the painting is left burnt.
-    /// Wrong Doors can reuse the same enter and leave plumbing later.
+    /// The escape: the choir's chord is missing voices. Find the singers whose mouths are painted
+    /// over (<see cref="MutedVoice"/>) and scrape them free; the song leads you from one to the next.
+    /// Once the chord is complete, the one real church among the black churches in the fog opens.
+    /// Walk to its altar: the full chord destroys the thing that hates harmony, and the painting
+    /// lets you go. Its canvas is left burnt.
     /// </summary>
     public class PaintedRealm : MonoBehaviour
     {
@@ -27,21 +28,23 @@ namespace HorrorGame.Painting
         [SerializeField] PaintedEntity entity;
         [Tooltip("Optional. Without a choir the entity hunts all the time.")]
         [SerializeField] Choir choir;
-        [Tooltip("The frame you escape through; the choir points here once every anchor has burned.")]
-        [SerializeField] Transform exitPoint;
-        [Tooltip("Door of the one real church in the fog. Until you are inside, the choir points here. Optional.")]
+        [Tooltip("The singers whose mouths are painted over. Free them all to complete the chord.")]
+        [SerializeField] MutedVoice[] voices = Array.Empty<MutedVoice>();
+        [Tooltip("Door of the one real church. Opens once the chord is complete. Optional.")]
         [SerializeField] Transform realChurchDoor;
+        [Tooltip("The altar inside the real church: reach it with the chord complete to destroy the thing.")]
+        [SerializeField] Transform altar;
+        [SerializeField] float altarReach = 6f;
+        [Tooltip("Where the thing stands for the finale, between you and the altar.")]
+        [SerializeField] Transform finaleSpot;
         [Tooltip("Places in the field a false church door can drop you.")]
         [SerializeField] Transform[] lostPoints = Array.Empty<Transform>();
-        [SerializeField] string falseDoorLine = "More field. The singing has stopped.";
-        [SerializeField] string churchLine = "They are all in here. The song is deafening.";
-        [SerializeField] BanishAnchor[] anchors = Array.Empty<BanishAnchor>();
         [SerializeField] PaintAttention attention;
         [SerializeField] PaintFilter paintFilter;
         [Tooltip("Global volume with the painting's colour grade. Enabled only while inside.")]
         [SerializeField] GameObject realmVolume;
         [SerializeField] Color fogColor = new Color(0.32f, 0.24f, 0.15f);
-        [SerializeField] float fogDensity = 0.035f;
+        [SerializeField] float fogDensity = 0.04f;
         [SerializeField] Color ambientLight = new Color(0.32f, 0.26f, 0.2f);
         [Tooltip("Lights that belong to the inside of the painting, switched on only while inside.")]
         [SerializeField] GameObject realmLighting;
@@ -52,9 +55,11 @@ namespace HorrorGame.Painting
 
         [Header("Feel")]
         [SerializeField] float fadeTime = 0.8f;
-        [SerializeField] string arrivalLine = "The paint is still wet. Somebody is singing.";
-        [SerializeField] string trappedLine = "The frame won't move. Something here is holding it shut.";
-        [SerializeField] string openLine = "The frame is open. RUN.";
+        [SerializeField] string arrivalLine = "The paint is still wet. Somebody is singing, but the chord is wrong.";
+        [SerializeField] string hintLine = "Some of them can't sing. Follow the song.";
+        [SerializeField] string completeLine = "The chord is whole. They are singing about one of the churches.";
+        [SerializeField] string falseDoorLine = "More field. The singing has stopped.";
+        [SerializeField] string churchLine = "They are all in here. The song is deafening.";
         [SerializeField] string banishedLine = "The canvas is ash. Whatever lived in it is gone.";
 
         HauntedPainting painting;
@@ -63,6 +68,7 @@ namespace HorrorGame.Painting
         Vector3 returnPosition;
         Quaternion returnRotation;
         bool busy;
+        bool finaleStarted;
 
         // Saved real-world atmosphere.
         bool savedFog;
@@ -70,7 +76,7 @@ namespace HorrorGame.Painting
         float savedFogDensity;
         FogMode savedFogMode;
 
-        // Simple overlay: black fade, objective counter and a subtitle line.
+        // Simple overlay: black fade, objective line and a subtitle line.
         Canvas overlay;
         Image fade;
         Text counter;
@@ -78,50 +84,53 @@ namespace HorrorGame.Painting
         Coroutine subtitleRoutine;
 
         public RealmState State { get; private set; } = RealmState.Outside;
-        public int Burned { get; private set; }
-        /// <summary>True once every anchor has burned: the frame you came through can be climbed out of.</summary>
-        public bool ExitOpen { get; private set; }
-        public int AnchorCount => anchors.Length;
+        public int Freed { get; private set; }
+        public int VoiceCount => voices.Length;
+        /// <summary>0 with every painted voice still muted, 1 with the chord complete.</summary>
+        public float Harmony => voices.Length == 0 ? 1f : (float)Freed / voices.Length;
+        public bool ChordComplete => Freed >= voices.Length;
+        /// <summary>True once the player has found the real church.</summary>
+        public bool InChurch { get; private set; }
+        public bool Busy => busy;
         public PaintAttention Attention => attention;
         public PaintFilter Filter => paintFilter;
         public GameObject Player => player;
         public Choir Choir => choir;
-        public bool Busy => busy;
-        /// <summary>True once the player has found the real church.</summary>
-        public bool InChurch { get; private set; }
+
+        /// <summary>Raised when the full chord destroys the entity, just before the player is returned.</summary>
+        public event Action Banished;
 
         /// <summary>
-        /// Where the player should go next: the nearest anchor still standing, or the exit frame once
-        /// every anchor has burned. Null when there is nowhere to go.
+        /// Where the song leads next: the nearest voice still painted over, then the real church,
+        /// then its altar. Null when there is nowhere to go.
         /// </summary>
         public Vector3? CurrentGoal
         {
             get
             {
-                if (realChurchDoor != null && !InChurch)
-                    return realChurchDoor.position;
-                if (ExitOpen)
-                    return exitPoint != null ? exitPoint.position : (Vector3?)null;
-                Vector3 from = player != null ? player.transform.position : transform.position;
-                Vector3? best = null;
-                float bestDistance = float.MaxValue;
-                foreach (var anchor in anchors)
+                if (!ChordComplete)
                 {
-                    if (anchor == null || !anchor.IsIntact)
-                        continue;
-                    float d = Vector3.Distance(from, anchor.transform.position);
-                    if (d < bestDistance)
+                    Vector3 from = player != null ? player.transform.position : transform.position;
+                    Vector3? best = null;
+                    float bestDistance = float.MaxValue;
+                    foreach (var voice in voices)
                     {
-                        bestDistance = d;
-                        best = anchor.transform.position;
+                        if (voice == null || voice.IsFreed)
+                            continue;
+                        float d = Vector3.Distance(from, voice.transform.position);
+                        if (d < bestDistance)
+                        {
+                            bestDistance = d;
+                            best = voice.transform.position;
+                        }
                     }
+                    return best;
                 }
-                return best;
+                if (!InChurch && realChurchDoor != null)
+                    return realChurchDoor.position;
+                return altar != null ? altar.position : (Vector3?)null;
             }
         }
-
-        /// <summary>Raised when the player escapes with the frame open and the entity is gone.</summary>
-        public event Action Banished;
 
         void Awake()
         {
@@ -129,21 +138,26 @@ namespace HorrorGame.Painting
             if (realmLighting != null) realmLighting.SetActive(false);
             if (paintFilter != null) paintFilter.enabled = false;
             if (attention != null) attention.enabled = false;
-            foreach (var anchor in anchors)
-                if (anchor != null)
-                    anchor.Realm = this;
+            foreach (var voice in voices)
+                if (voice != null)
+                    voice.Realm = this;
             if (entity != null)
                 entity.Realm = this;
         }
 
-        public void Configure(Transform arrival, PaintedEntity realmEntity, BanishAnchor[] realmAnchors,
-            PaintAttention realmAttention, PaintFilter filter)
+        /// <summary>Wires the realm up in code (tests).</summary>
+        public void Configure(Transform arrival, PaintedEntity realmEntity, MutedVoice[] realmVoices,
+            PaintAttention realmAttention, PaintFilter filter, Choir realmChoir = null,
+            Transform churchDoor = null, Transform realmAltar = null)
         {
             arrivalPoint = arrival;
             entity = realmEntity;
-            anchors = realmAnchors;
+            voices = realmVoices;
             attention = realmAttention;
             paintFilter = filter;
+            choir = realmChoir;
+            realChurchDoor = churchDoor;
+            altar = realmAltar;
             Awake();
         }
 
@@ -181,50 +195,31 @@ namespace HorrorGame.Painting
                 entity.Emerge(false, false);
             UpdateCounter();
             yield return Fade(1f, 0f);
-            ShowSubtitle(arrivalLine, 4f);
+            ShowSubtitle(arrivalLine, 4.5f);
             busy = false;
-            yield return new WaitForSeconds(5f);
-            if (State == RealmState.Inside && !ExitOpen)
-                ShowSubtitle(realChurchDoor != null ? "Follow the singing." : "Burn the easels. Follow the singing.", 4f);
+            yield return new WaitForSeconds(6f);
+            if (State == RealmState.Inside && Freed == 0)
+                ShowSubtitle(hintLine, 4f);
         }
 
-        /// <summary>Climb out through the frame. Only works once every anchor has burned.</summary>
-        public void Leave()
-        {
-            if (State != RealmState.Inside || busy)
-                return;
-            if (!ExitOpen)
-            {
-                ShowSubtitle(trappedLine, 3f);
-                return;
-            }
-            StartCoroutine(LeaveRoutine(true));
-        }
-
-        IEnumerator LeaveRoutine(bool banished)
+        IEnumerator ReturnRoutine()
         {
             busy = true;
-            if (banished && entity != null)
-                entity.Banish();
             yield return Fade(0f, 1f);
             if (choir != null)
                 choir.End();
             if (entity != null)
                 entity.Deactivate();
-            if (banished)
-                Banished?.Invoke();
             SetInside(false);
             Teleport(returnPosition, returnRotation);
             if (painting != null)
             {
                 painting.SetEmpty(false);
-                if (banished)
-                    painting.Burn();
+                painting.Burn();
             }
-            State = banished ? RealmState.Banished : RealmState.Outside;
+            State = RealmState.Banished;
             yield return Fade(1f, 0f);
-            if (banished)
-                ShowSubtitle(banishedLine, 5f);
+            ShowSubtitle(banishedLine, 5f);
             busy = false;
         }
 
@@ -288,6 +283,23 @@ namespace HorrorGame.Painting
                 player.transform.SetPositionAndRotation(position, rotation);
         }
 
+        // ------------------------------------------------------------------ the voices
+
+        /// <summary>Called by a <see cref="MutedVoice"/> when its paint is scraped off.</summary>
+        public void OnVoiceFreed(MutedVoice voice)
+        {
+            if (State != RealmState.Inside)
+                return;
+            Freed++;
+            UpdateCounter();
+            if (entity != null)
+                entity.Agitate();
+            if (choir != null)
+                choir.OnVoiceFreed();
+            if (ChordComplete)
+                ShowSubtitle(completeLine, 4.5f);
+        }
+
         // ------------------------------------------------------------------ the churches
 
         /// <summary>A false church: the door opens onto more field somewhere else, and the singing stops.</summary>
@@ -327,10 +339,10 @@ namespace HorrorGame.Painting
                 choir.FallSilent(true);
         }
 
-        /// <summary>The real church: step inside for the last stretch.</summary>
+        /// <summary>The real church: step inside for the last stretch. Shut until the chord is complete.</summary>
         public void EnterChurch(Transform inside)
         {
-            if (State != RealmState.Inside || busy || inside == null)
+            if (State != RealmState.Inside || busy || inside == null || !ChordComplete)
                 return;
             StartCoroutine(EnterChurchRoutine(inside));
         }
@@ -351,27 +363,39 @@ namespace HorrorGame.Painting
             ShowSubtitle(churchLine, 4f);
         }
 
-        // ------------------------------------------------------------------ banishing
-
-        /// <summary>Called by an anchor when it has been burned.</summary>
-        public void OnAnchorBurned(BanishAnchor anchor)
+        void Update()
         {
-            if (State != RealmState.Inside)
+            if (State != RealmState.Inside || busy || finaleStarted || !ChordComplete || altar == null || player == null)
                 return;
-            Burned++;
-            UpdateCounter();
-            if (entity != null)
-                entity.AddBurn();
+            if (realChurchDoor != null && !InChurch)
+                return;
+            Vector3 d = altar.position - player.transform.position;
+            d.y = 0f;
+            if (d.magnitude <= altarReach)
+                StartCoroutine(FinaleRoutine());
+        }
+
+        /// <summary>The whole choir at full voice. The thing stands up in front of the altar and comes apart.</summary>
+        IEnumerator FinaleRoutine()
+        {
+            finaleStarted = true;
+            busy = true;
             if (choir != null)
-                choir.FallSilent(true);
-            else if (entity != null)
-                entity.Emerge(true, true);
-            if (Burned >= anchors.Length)
+                choir.Crescendo();
+            if (entity != null)
             {
-                ExitOpen = true;
-                UpdateCounter();
-                ShowSubtitle(openLine, 4f);
+                Vector3 spot = finaleSpot != null ? finaleSpot.position : altar.position;
+                entity.EmergeAt(spot);
             }
+            ShowSubtitle("Every voice at once.", 3f);
+            yield return new WaitForSeconds(2.5f);
+            if (entity != null)
+                entity.Banish();
+            if (paintFilter != null)
+                paintFilter.Dread = 1f;
+            yield return new WaitForSeconds(2.5f);
+            Banished?.Invoke();
+            yield return ReturnRoutine();
         }
 
         // ------------------------------------------------------------------ overlay
@@ -397,7 +421,7 @@ namespace HorrorGame.Painting
             Stretch(fade.rectTransform);
 
             counter = MakeText("Counter", canvasObject.transform, font, 30, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -40f));
-            counter.enabled = false;
+            counter.enabled = State == RealmState.Inside;
             subtitle = MakeText("Subtitle", canvasObject.transform, font, 34, TextAnchor.LowerCenter, new Vector2(0.5f, 0f), new Vector2(0f, 120f));
         }
 
@@ -448,10 +472,12 @@ namespace HorrorGame.Painting
         void UpdateCounter()
         {
             EnsureOverlay();
-            if (realChurchDoor != null && !InChurch)
+            if (!ChordComplete)
+                counter.text = $"Voices freed {Freed} / {voices.Length}";
+            else if (!InChurch && realChurchDoor != null)
                 counter.text = "Find the church they are singing about";
             else
-                counter.text = ExitOpen ? "Get back to the frame" : $"Burned {Burned} / {anchors.Length}";
+                counter.text = "Go to the altar";
         }
 
         public void ShowSubtitle(string line, float seconds)

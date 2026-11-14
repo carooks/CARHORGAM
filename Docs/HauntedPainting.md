@@ -1,69 +1,75 @@
-# Haunted painting (test level)
+# Haunted painting: the buried choir (test level)
 
-A cursed portrait you can step into: a pocket world a painter trapped something in. Inside is a
-dusk field with a choir buried in it up to their necks, singing. The world only finishes painting
-itself where you look. When the choir stops singing, something stands up in the unfinished paint.
+A painter cursed a canvas and trapped something in it. Step into the portrait and you are in a
+pocket world you have to escape: a dusk field in thick fog, painted in heavy oil strokes, with a
+choir buried up to their necks in the grass, singing.
 
 ## How to play it
 
 1. In Unity: **Horror Game > Build Haunted Painting Test**. This generates
    `Scenes/HauntedPainting_Test.unity` and adds the paint filter to the URP renderer (switched off).
-2. Press Play. You are in a shut-up parlor. Walk to the portrait on the far wall; the smeared
-   face starts to move as you get close. Look at it and press **E**.
-3. Inside: a dusk field in thick fog with 28 heads buried in the grass, and four identical black
-   churches looming in the fog. Only one is real; the song leads to it.
-   - **False church:** the door opens onto more field somewhere else in the fog, and the singing stops.
-   - **Real church:** the last stretch. A long black nave, a head buried in every pew, the song
-     deafening. The easels are in the aisle and the way out is behind the altar.
-   - The world paints itself in wherever you look. Turn around and it dissolves into wet paint behind you.
-   - **While the choir sings, you are safe, and they show you the way.** Every head turns toward
-     the real church, then (inside) the nearest easel you have not burned, then the frame behind the altar. The chord is in
-     tune when you face that way and goes sour when you face away.
-   - **Every 30 to 50 seconds, and every time an easel burns, they all stop at once and snap their
-     heads to one spot** in the wet paint behind you. Something is standing there.
-   - **It does not chase.** It walks slowly to the last sound it heard (your footsteps carry 5 m
-     walking, 13 m sprinting; a burning easel 30 m), stops there to listen, then wanders on.
-     **Stand still and quiet and it passes you.** It only kills someone it reaches while they are
-     still making noise.
-   - **It can only move where the paint is wet.** Follow the heads' eyes and look at it: it freezes.
-     After about 11 seconds the singing starts again and it sinks back into the paint.
-   - Press E at an easel to burn it. Every burn stops the song with a shriek and makes the thing faster.
-   - The frame you came through will not open until all three easels are burnt. Then run back to
-     it and press E to escape. Escaping breaks the curse: the portrait is left burnt.
-   - If it reaches you, you die and the level restarts.
-4. Exe: **Horror Game > Build Haunted Painting Test (.exe)** writes `Builds/HauntedPainting/HauntedPainting.exe`.
+   Or play the exe: **Horror Game > Build Haunted Painting Test (.exe)** writes
+   `Builds/HauntedPainting/HauntedPainting.exe`.
+2. You start in a shut-up parlor. The smeared face in the portrait moves as you get close.
+   Look at it and press **E**.
+3. Inside:
+   - **The world only finishes painting itself where you look.** Turn around and it dissolves into
+     wet, unfinished strokes behind you.
+   - **The song is the map.** Every head turns toward where you need to go next, and the chord
+     swells and comes into tune when you face that way and sours when you face away.
+   - **The chord is missing voices.** Four singers around the field have their mouths painted over
+     in white. Press E on one to scrape the paint off and they join in. The song leads you from one
+     to the next, all the way round the field.
+   - **The thing in the painting hates harmony.** It gets angrier all the time, faster the fuller
+     the chord, faster still while the choir is in tune, and in a burst every time you free a voice.
+     When it boils over, the choir falls silent in fear and every head turns to where it stands, in
+     the wet paint behind you.
+   - **It does not chase.** It walks slowly to the last sound it heard (footsteps carry 5 m walking,
+     13 m sprinting; scraping paint 8 m), listens, then wanders on. **Stand still and quiet and it
+     passes you.** It only kills someone it reaches while they are still making noise. It can only
+     move where the paint is wet: follow the heads' eyes and look at it, and it freezes. After about
+     12 seconds it sinks away and the singing starts again.
+   - **Four identical black churches stand in the fog; only one is real.** False doors open onto
+     more field somewhere else, and the singing stops. The real one stays shut until the chord is
+     complete; then the song leads you to it.
+   - **The real church** is a long black nave with a head buried in every pew, the song deafening.
+     Walk to the altar: every voice at once, the thing stands up behind the altar and the sound
+     destroys it. You are back in the parlor and the canvas is burnt.
+4. **F6** cycles the voice filter (off, half, full) so the raw synth voices can be compared.
 
 ## How it works
 
 | Piece | File |
 | --- | --- |
 | The portrait you press E on (wakes, empties, burns) | `Runtime/Painting/HauntedPainting.cs`, `Shaders/HauntedPortrait.shader` |
-| Entering, leaving, atmosphere swap, burn count, frame lock, subtitles | `Runtime/Painting/PaintedRealm.cs` |
+| Entering and leaving, atmosphere swap, voices, churches, finale, subtitles | `Runtime/Painting/PaintedRealm.cs` |
 | "Paints only where you look": 64 compass directions, each 0 (wet) to 1 (finished) | `Runtime/Painting/PaintAttention.cs` |
 | Oil-paint look: rotated, stretched Kuwahara filter plus wet underpainting, drips, dread | `Shaders/PaintedRealm.shader`, `Runtime/Painting/PaintFilter.cs` |
-| The choir: singing, silences, heads that point the way | `Runtime/Painting/Choir.cs`, `Runtime/Painting/ChoirSinger.cs` |
-| The thing that stands up when they stop (placeholder body, swappable) | `Runtime/Painting/PaintedEntity.cs` |
-| Easels / anything you burn | `Runtime/Painting/BanishAnchor.cs` |
-| The exit frame | `Runtime/Painting/RealmExit.cs` |
-| Church doors (false ones drop you in the fog, the real one takes you inside) | `Runtime/Painting/ChurchDoor.cs` |
+| The choir: guidance, tuning, anger, silences, voice filter | `Runtime/Painting/Choir.cs` |
+| One singer: voice, head, mouth, filters | `Runtime/Painting/ChoirSinger.cs` |
+| A painted-over mouth you scrape free | `Runtime/Painting/MutedVoice.cs` |
+| The thing (placeholder body, swappable) | `Runtime/Painting/PaintedEntity.cs` |
+| Church doors | `Runtime/Painting/ChurchDoor.cs` |
 | Scene generator | `Editor/PaintingBuilder.cs` |
-| Tests (5) | `Tests/PlayMode/PaintingTests.cs` |
+| Tests (6) | `Tests/PlayMode/PaintingTests.cs` |
 
-- The realm is built in the same scene, 1 km east of the parlor. Entering is a teleport plus a
-  switch of fog, ambient light, post-processing and filters, so no scene loading and the player
-  keeps their state. Wrong Doors can use the same plumbing.
+- **Voices** are synthesized in code (a held "ooh" on one chord note per singer). To use real
+  recordings, drop a looping clip of someone holding one note (ideally A3, 220 Hz) into a
+  singer's **Voice Clip** field; the game pitch-shifts it to that singer's note.
+- **Voice filter:** an Audio Reverb Zone over the field gives the huge echo; each singer has a
+  low-pass filter (sung from under the earth), a slow shared tape wobble, and distortion that
+  rises with the thing's anger. The Choir's **Filter Strength** (0..1) scales all of it.
+- **Co-op:** the tuning is averaged over every player. Split up and the chord sours: no guidance,
+  but nothing to anger it either. Move together and you get guidance but draw it.
+- The realm is built in the same scene, 1 km east of the parlor; the church interior sits 200 m
+  north of the field. Entering is a teleport plus a switch of fog, ambient light, post-processing
+  and filters, so no scene loading. Wrong Doors can reuse this.
 - The paint filter is a URP **Full Screen Pass** renderer feature named `PaintedRealm` on
-  `URP_Horror_Renderer`. It is off except while you are inside. The pixel filter is switched off
-  inside, because brushstrokes do not survive being rendered at half resolution.
-- `BuildPortrait` and `BuildRealm` are public, so the portrait and its world can be dropped into
-  a house scene later.
+  `URP_Horror_Renderer`, off except while inside. The pixel filter is off inside.
 
-## Open decisions (Chad)
+## Open
 
-- **The choir is the entity** (Chad's pick). What stands up when they stop is a placeholder body
-  (tall, long coat, face wiped off into a smear).
-- **How the entity is banished.** The easels are a placeholder objective inside the church.
-- **Paint tools** (throw white paint to erase, wet paint that slows it, paint your own door out)
-  are not built yet. Next milestone, after this one is played.
-- **Where the painting hangs** in the real town (a house in ring 1 is the obvious place).
-- **Which of the 8 entities this is**, or whether it is a 9th.
+- Swap primitives for Chad's local medieval / Abandoned Village asset packs (churches, fences,
+  trees). The packs stay out of the repo.
+- Paint tools (wet paint that slows it, throwing white paint) are not built.
+- Where the painting hangs in town, and how it fits the 8 entities.

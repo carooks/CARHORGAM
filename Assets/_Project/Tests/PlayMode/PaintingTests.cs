@@ -70,7 +70,7 @@ namespace HorrorGame.Tests
             var player = SpawnPlayer(new Vector3(0f, 0f, -10f), Vector3.forward, out var camera, out var health);
             var realm = SpawnRealm(camera, out var attention);
             var entity = SpawnEntity(new Vector3(0f, 0f, 8f));
-            realm.Configure(Track(new GameObject("Arrival")).transform, entity, Array.Empty<BanishAnchor>(), attention, null);
+            realm.Configure(Track(new GameObject("Arrival")).transform, entity, Array.Empty<MutedVoice>(), attention, null);
             attention.enabled = true;
             attention.ResetAll(1f); // as if the player has been looking ahead all along
             entity.Activate(player);
@@ -102,7 +102,7 @@ namespace HorrorGame.Tests
             var player = SpawnPlayer(new Vector3(0f, 0f, -10f), Vector3.back, out var camera, out var health);
             var realm = SpawnRealm(camera, out var attention);
             var entity = SpawnEntity(new Vector3(0f, 0f, 2f));
-            realm.Configure(Track(new GameObject("Arrival")).transform, entity, Array.Empty<BanishAnchor>(), attention, null);
+            realm.Configure(Track(new GameObject("Arrival")).transform, entity, Array.Empty<MutedVoice>(), attention, null);
             attention.enabled = false;
             attention.ResetAll(0f); // all wet: it can always move
             entity.Activate(player);
@@ -117,21 +117,19 @@ namespace HorrorGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator BurningEveryAnchor_OpensTheFrame_AndEscapingBanishesIt()
+        public IEnumerator FreeingEveryVoice_OpensTheRealChurch_AndTheFullChordDestroysIt()
         {
             BuildArena();
             Vector3 outsidePosition = new Vector3(0f, 0f, -15f);
             var player = SpawnPlayer(outsidePosition, Vector3.forward, out var camera, out var health);
             var realm = SpawnRealm(camera, out var attention);
-            var entity = SpawnEntity(new Vector3(0f, 0f, 15f));
-            var arrival = Track(new GameObject("Arrival")).transform;
-            arrival.position = new Vector3(-10f, 0f, 0f);
-            var anchors = new[]
-            {
-                Track(new GameObject("AnchorA")).AddComponent<BanishAnchor>(),
-                Track(new GameObject("AnchorB")).AddComponent<BanishAnchor>(),
-            };
-            realm.Configure(arrival, entity, anchors, attention, null);
+            var entity = SpawnEntity(new Vector3(15f, 0f, 15f));
+            var arrival = Point("Arrival", new Vector3(-10f, 0f, 0f));
+            var churchDoor = Point("ChurchDoor", new Vector3(20f, 0f, 0f));
+            var churchInside = Point("ChurchInside", new Vector3(0f, 0f, 10f));
+            var altar = Point("Altar", new Vector3(0f, 0f, 25f));
+            var voices = new[] { SpawnVoice(new Vector3(-10f, 0f, 5f)), SpawnVoice(new Vector3(-10f, 0f, 12f)) };
+            realm.Configure(arrival, entity, voices, attention, null, null, churchDoor, altar);
 
             realm.Enter(player, null);
             yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Inside, 5f, "take the player inside");
@@ -140,19 +138,29 @@ namespace HorrorGame.Tests
             attention.enabled = false;
             attention.ResetAll(1f);
 
-            anchors[0].Ignite();
-            yield return WaitFor(() => realm.Burned == 1, 5f, "burn the first anchor");
-            Assert.AreEqual(PaintedRealm.RealmState.Inside, realm.State, "One of two burned is not enough.");
-            realm.Leave();
+            Assert.That(Vector3.Distance(realm.CurrentGoal.Value, voices[0].transform.position), Is.LessThan(0.01f),
+                "The song should lead to the nearest painted-over voice first.");
+            voices[0].Free();
+            Assert.AreEqual(1, realm.Freed);
+            Assert.AreEqual(0.5f, realm.Harmony, 0.001f);
+            Assert.That(Vector3.Distance(realm.CurrentGoal.Value, voices[1].transform.position), Is.LessThan(0.01f));
+
+            realm.EnterChurch(churchInside);
+            yield return WaitSeconds(1.5f);
+            Assert.IsFalse(realm.InChurch, "The real church stays shut until the chord is complete.");
+
+            voices[1].Free();
+            Assert.IsTrue(realm.ChordComplete);
+            Assert.That(Vector3.Distance(realm.CurrentGoal.Value, churchDoor.position), Is.LessThan(0.01f),
+                "With the chord complete, the song should lead to the real church.");
+            realm.EnterChurch(churchInside);
+            yield return WaitFor(() => realm.InChurch && !realm.Busy, 5f, "go into the church");
+            Assert.That(Vector3.Distance(realm.CurrentGoal.Value, altar.position), Is.LessThan(0.01f));
             yield return WaitSeconds(1f);
-            Assert.AreEqual(PaintedRealm.RealmState.Inside, realm.State, "The frame stays shut until every anchor burns.");
+            Assert.AreEqual(PaintedRealm.RealmState.Inside, realm.State, "Nothing happens until you reach the altar.");
 
-            anchors[1].Ignite();
-            yield return WaitFor(() => realm.ExitOpen, 5f, "open the frame once the last anchor burns");
-            Assert.IsFalse(entity.IsBanished, "It is only gone once you escape.");
-            realm.Leave();
-            yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Banished, 10f, "escape and break the curse");
-
+            player.transform.position = new Vector3(0f, 0f, 21f);
+            yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Banished, 15f, "destroy it with the full chord and let you go");
             Assert.IsTrue(entity.IsBanished);
             Assert.IsTrue(health.IsAlive);
             Assert.That(Vector3.Distance(player.transform.position, outsidePosition), Is.LessThan(0.1f),
@@ -160,22 +168,34 @@ namespace HorrorGame.Tests
             Assert.IsFalse(realm.CanEnter, "A banished painting cannot be entered again.");
         }
 
+        [Test]
+        public void Alignment_IsHighFacingTheGoal_AndSoursWhenPlayersSplitUp()
+        {
+            var goal = new Vector3(0f, 0f, 20f);
+            var a = Track(new GameObject("A")).transform;
+            var b = Track(new GameObject("B")).transform;
+            a.rotation = b.rotation = Quaternion.LookRotation(Vector3.forward);
+            Assert.AreEqual(1f, Choir.ComputeAlignment(new[] { a, b }, goal), 0.001f, "Both heading for it: full harmony.");
+            b.rotation = Quaternion.LookRotation(Vector3.back);
+            Assert.AreEqual(0.5f, Choir.ComputeAlignment(new[] { a, b }, goal), 0.001f, "Split up: the chord sours.");
+            a.rotation = Quaternion.LookRotation(Vector3.back);
+            Assert.AreEqual(0f, Choir.ComputeAlignment(new[] { a, b }, goal), 0.001f, "Both heading away: no harmony.");
+        }
+
         [UnityTest]
-        public IEnumerator Choir_PointsAtTheNextEasel_AndWhenItFallsSilent_TheThingComesOut()
+        public IEnumerator Choir_PointsAtTheNextMutedVoice_AndWhenItFallsSilent_TheThingComesOut()
         {
             BuildArena();
             var player = SpawnPlayer(new Vector3(0f, 0f, -10f), Vector3.forward, out var camera, out _);
             var realm = SpawnRealm(camera, out var attention);
             var entity = SpawnEntity(new Vector3(0f, 0f, 15f));
-            var anchor = Track(new GameObject("Anchor")).AddComponent<BanishAnchor>();
-            anchor.transform.position = new Vector3(12f, 0f, -10f); // due east of the player
+            var muted = SpawnVoice(new Vector3(12f, 0f, -10f)); // due east of the player
             var singerObject = Track(new GameObject("Singer"));
             singerObject.transform.position = new Vector3(0f, 0f, 0f);
             var singer = singerObject.AddComponent<ChoirSinger>();
             var choir = Track(new GameObject("Choir")).AddComponent<Choir>();
             choir.Configure(realm, entity, new[] { singer });
-            realm.Configure(Track(new GameObject("Arrival")).transform, entity, new[] { anchor }, attention, null);
-            SetField(realm, "choir", choir);
+            realm.Configure(Track(new GameObject("Arrival")).transform, entity, new[] { muted }, attention, null, choir);
             attention.enabled = true;
             attention.ResetAll(1f);
 
@@ -187,8 +207,8 @@ namespace HorrorGame.Tests
 
             yield return WaitSeconds(3f);
             Vector3 look = singer.Head.forward;
-            Vector3 toAnchor = (anchor.transform.position - singer.transform.position).normalized;
-            Assert.That(Vector3.Angle(look, toAnchor), Is.LessThan(10f), "Every head should turn to the next easel.");
+            Vector3 toVoice = (muted.transform.position - singer.transform.position).normalized;
+            Assert.That(Vector3.Angle(look, toVoice), Is.LessThan(10f), "Every head should turn to the next painted-over voice.");
 
             choir.FallSilent(false);
             Assert.AreEqual(Choir.ChoirState.Silent, choir.State);
@@ -205,11 +225,19 @@ namespace HorrorGame.Tests
 
         // ------------------------------------------------------------------ helpers
 
-        static void SetField(object target, string name, object value)
+        Transform Point(string name, Vector3 position)
         {
-            var field = target.GetType().GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            Assert.IsNotNull(field, name);
-            field.SetValue(target, value);
+            var t = Track(new GameObject(name)).transform;
+            t.position = position;
+            return t;
+        }
+
+        MutedVoice SpawnVoice(Vector3 position)
+        {
+            var go = Track(new GameObject("MutedVoice"));
+            go.transform.position = position;
+            go.AddComponent<ChoirSinger>();
+            return go.AddComponent<MutedVoice>();
         }
 
         void BuildArena()

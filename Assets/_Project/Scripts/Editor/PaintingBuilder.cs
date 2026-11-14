@@ -362,10 +362,9 @@ namespace HorrorGame.EditorTools
             }
 
             // The real church, bigger inside than out: the last stretch.
-            var church = BuildChurchInterior(root, P(0f, 200f), realm, soil, out var churchArrival, out var churchAnchors,
-                out var exit, out var churchSingers, out var churchNavMesh);
+            BuildChurchInterior(root, P(0f, 200f), soil, out var churchArrival, out var altar, out var finaleSpot,
+                out var churchSingers);
             SerializedFields.Set(realDoor, "inside", churchArrival);
-            var anchors = churchAnchors;
 
             // The thing waits under the paint until the singing stops.
             var entity = BuildEntity(root, P(6f, 40f));
@@ -378,6 +377,45 @@ namespace HorrorGame.EditorTools
             for (int i = 0; i < spots.Count; i++)
                 singers.Add(BuildSinger(choirRoot, P(spots[i].x, spots[i].y), chord[i % chord.Length], soil));
             singers.AddRange(churchSingers);
+
+            // The missing voices: four singers far apart around the field with their mouths painted
+            // over in white. The song leads from one to the next, all the way round the field.
+            var voices = new List<Object>();
+            var white = kit.Get("M_Painting_WhitePaint", new Color(0.92f, 0.9f, 0.85f), 0.7f);
+            foreach (var want in new[] { new Vector2(-30f, -12f), new Vector2(-24f, 34f), new Vector2(22f, 26f), new Vector2(28f, -30f) })
+            {
+                // The field singer closest to each corner of the route gets painted over.
+                int best = 0;
+                for (int i = 1; i < spots.Count; i++)
+                    if (Vector2.Distance(spots[i], want) < Vector2.Distance(spots[best], want))
+                        best = i;
+                var singer = singers[best];
+                var head = singer.transform.Find("Head");
+                var paint = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                paint.name = "WhitePaint";
+                Object.DestroyImmediate(paint.GetComponent<Collider>());
+                paint.GetComponent<Renderer>().sharedMaterial = white;
+                paint.transform.SetParent(head, false);
+                paint.transform.localPosition = new Vector3(0f, -0.06f, 0.15f);
+                paint.transform.localRotation = Quaternion.Euler(0f, 0f, Rand(-12f, 12f));
+                paint.transform.localScale = new Vector3(0.24f, 0.13f, 0.04f);
+                // A collider on the head so the interaction ray can find it.
+                var hit = head.gameObject.AddComponent<SphereCollider>();
+                hit.radius = 0.5f;
+                var voice = singer.gameObject.AddComponent<MutedVoice>();
+                SerializedFields.Set(voice, "paint", paint);
+                voices.Add(voice);
+            }
+
+            // The cavernous echo over the whole field and the church.
+            var reverbObject = new GameObject("ChoirReverb");
+            reverbObject.transform.SetParent(choirRoot, false);
+            reverbObject.transform.position = origin + new Vector3(0f, 0f, 80f);
+            var reverb = reverbObject.AddComponent<AudioReverbZone>();
+            reverb.reverbPreset = AudioReverbPreset.Concerthall;
+            reverb.minDistance = 200f;
+            reverb.maxDistance = 260f;
+            SerializedFields.Set(choir, "reverb", reverb);
 
             // NavMesh for the entity, baked from colliders at runtime.
             var navMesh = new GameObject("RealmNavMesh");
@@ -409,13 +447,14 @@ namespace HorrorGame.EditorTools
             SerializedFields.Set(realm, "arrivalPoint", arrival);
             SerializedFields.Set(realm, "entity", entity);
             SerializedFields.Set(realm, "choir", choir);
-            SerializedFields.Set(realm, "exitPoint", exit.transform);
+            SerializedFields.Set(realm, "altar", altar);
+            SerializedFields.Set(realm, "finaleSpot", finaleSpot);
             SerializedFields.Set(realm, "realChurchDoor", realDoor.transform);
             SerializedFields.SetArray(realm, "lostPoints", lostPoints);
             SerializedFields.Set(choir, "realm", realm);
             SerializedFields.Set(choir, "entity", entity);
             SerializedFields.SetArray(choir, "singers", singers.ConvertAll(x => (Object)x));
-            SerializedFields.SetArray(realm, "anchors", anchors);
+            SerializedFields.SetArray(realm, "voices", voices);
             SerializedFields.Set(realm, "attention", attention);
             SerializedFields.Set(realm, "paintFilter", filter);
             SerializedFields.Set(realm, "realmVolume", volume);
@@ -473,9 +512,8 @@ namespace HorrorGame.EditorTools
         /// aisle, and behind the altar the back of the frame you came in through: the way out.
         /// Bigger inside than it is outside. Built far from the field; the real door teleports here.
         /// </summary>
-        static Transform BuildChurchInterior(Transform parent, Vector3 origin, PaintedRealm realm, Material soil,
-            out Transform arrival, out List<Object> anchors, out RealmExit exit, out List<ChoirSinger> singers,
-            out GameObject navMesh)
+        static void BuildChurchInterior(Transform parent, Vector3 origin, Material soil,
+            out Transform arrival, out Transform altar, out Transform finaleSpot, out List<ChoirSinger> singers)
         {
             var black = kit.Get("M_Painting_ChurchBlack", new Color(0.02f, 0.018f, 0.02f), 0.15f);
             var stone = kit.Get("M_Painting_ChurchStone", new Color(0.16f, 0.13f, 0.12f), 0.2f);
@@ -526,7 +564,7 @@ namespace HorrorGame.EditorTools
                 }
             }
 
-            // The altar, candles, and behind it the back of the frame: the way out.
+            // The altar and its candles. Reach it with the chord complete.
             kit.Box("AltarStep", root, P(0f, length - 5f, 0.2f), new Vector3(8f, 0.4f, 4f), stone);
             kit.Box("Altar", root, P(0f, length - 5f, 0.9f), new Vector3(3f, 1.0f, 1.2f), black);
             kit.Box("AltarCloth", root, P(0f, length - 5f, 1.42f), new Vector3(3.2f, 0.04f, 1.4f), cloth, false);
@@ -536,27 +574,22 @@ namespace HorrorGame.EditorTools
                 candle.transform.SetParent(root, true);
                 kit.Box("CandleStick", root, P(i * 1.1f, length - 5f, 1.6f), new Vector3(0.08f, 0.35f, 0.08f), cloth, false);
             }
-            exit = BuildExitFrame(root, P(0f, length - 1.5f), kit.Get("M_Painting_Gilt", new Color(0.42f, 0.3f, 0.12f), 0.55f, 0.8f));
-            exit.transform.parent.rotation = Quaternion.Euler(0f, 180f, 0f);
-            SerializedFields.Set(exit, "realm", realm);
-
-            // Placeholder objective until the banishing is decided: three easels in the aisle.
-            anchors = new List<Object>
-            {
-                BuildEasel(root, P(-0.4f, 14f), Quaternion.Euler(0f, 15f, 0f), realm),
-                BuildEasel(root, P(0.4f, 27f), Quaternion.Euler(0f, -15f, 0f), realm),
-                BuildEasel(root, P(0f, length - 8.5f), Quaternion.identity, realm),
-            };
+            altar = new GameObject("AltarPoint").transform;
+            altar.SetParent(root, false);
+            altar.position = P(0f, length - 5f);
+            // For the finale the thing stands up here, looming behind the altar.
+            finaleSpot = new GameObject("FinaleSpot").transform;
+            finaleSpot.SetParent(root, false);
+            finaleSpot.position = P(0f, length - 2.5f);
 
             arrival = new GameObject("ChurchArrival").transform;
             arrival.SetParent(root, false);
             arrival.SetPositionAndRotation(P(0f, 1.5f, 0.05f), Quaternion.identity);
 
-            navMesh = new GameObject("ChurchNavMesh");
+            var navMesh = new GameObject("ChurchNavMesh");
             navMesh.transform.SetParent(root, false);
             navMesh.transform.position = P(0f, length / 2f, 4f);
             navMesh.AddComponent<RuntimeNavMesh>().Size = new Vector3(halfWidth * 2f + 2f, 12f, length + 2f);
-            return root;
         }
 
         /// <summary>Where you arrive in the field: the raw back of the canvas you came through. Not a way out.</summary>
@@ -627,51 +660,6 @@ namespace HorrorGame.EditorTools
                 kit.Box("Branch", tree, basePos + Vector3.up * y + rot * Vector3.forward * len * 0.5f,
                     new Vector3(0.12f, 0.12f, len), wood, false, rot);
             }
-        }
-
-        static RealmExit BuildExitFrame(Transform parent, Vector3 position, Material gilt)
-        {
-            var root = GrayboxKit.Group("ExitFrame", parent).transform;
-            root.position = position;
-            var back = kit.Get("M_Painting_CanvasBack", new Color(0.5f, 0.44f, 0.33f), 0.05f);
-            const float w = 2.2f, h = 3f, f = 0.25f;
-            // Seen from inside: the raw back of the canvas, stretcher bars and all, standing in the field.
-            var panel = kit.Box("CanvasBack", root, position + new Vector3(0f, h / 2 + 0.2f, 0f), new Vector3(w, h, 0.05f), back);
-            kit.Box("Stretcher_H", root, position + new Vector3(0f, h / 2 + 0.2f, 0.06f), new Vector3(w, 0.08f, 0.06f), gilt, false);
-            kit.Box("Stretcher_V", root, position + new Vector3(0f, h / 2 + 0.2f, 0.06f), new Vector3(0.08f, h, 0.06f), gilt, false);
-            kit.Box("Frame_Top", root, position + new Vector3(0f, h + 0.2f + f / 2, 0f), new Vector3(w + 2 * f, f, 0.15f), gilt);
-            kit.Box("Frame_Bottom", root, position + new Vector3(0f, 0.2f - f / 2, 0f), new Vector3(w + 2 * f, f, 0.15f), gilt);
-            kit.Box("Frame_Left", root, position + new Vector3(-w / 2 - f / 2, h / 2 + 0.2f, 0f), new Vector3(f, h, 0.15f), gilt);
-            kit.Box("Frame_Right", root, position + new Vector3(w / 2 + f / 2, h / 2 + 0.2f, 0f), new Vector3(f, h, 0.15f), gilt);
-            return panel.AddComponent<RealmExit>();
-        }
-
-        static BanishAnchor BuildEasel(Transform parent, Vector3 position, Quaternion rotation, PaintedRealm realm)
-        {
-            var wood = kit.Get("M_Painting_EaselWood", new Color(0.4f, 0.28f, 0.16f), 0.1f);
-            var canvasMat = kit.Get("M_Painting_SmallCanvas", new Color(0.55f, 0.48f, 0.38f), 0.05f);
-            var root = GrayboxKit.Group("Easel", parent).transform;
-            root.SetPositionAndRotation(position, rotation);
-            Vector3 L(float x, float y, float z) => root.TransformPoint(new Vector3(x, y, z));
-            var legs = new List<Renderer>();
-            legs.Add(kit.Box("LegL", root, L(-0.35f, 0.85f, 0f), new Vector3(0.06f, 1.75f, 0.06f), wood, false, rotation * Quaternion.Euler(-8f, 0f, -10f)).GetComponent<Renderer>());
-            legs.Add(kit.Box("LegR", root, L(0.35f, 0.85f, 0f), new Vector3(0.06f, 1.75f, 0.06f), wood, false, rotation * Quaternion.Euler(-8f, 0f, 10f)).GetComponent<Renderer>());
-            legs.Add(kit.Box("LegBack", root, L(0f, 0.8f, 0.45f), new Vector3(0.06f, 1.7f, 0.06f), wood, false, rotation * Quaternion.Euler(20f, 0f, 0f)).GetComponent<Renderer>());
-            legs.Add(kit.Box("Ledge", root, L(0f, 0.85f, -0.08f), new Vector3(0.9f, 0.05f, 0.1f), wood, false, rotation).GetComponent<Renderer>());
-            // The small painting on it: a dark shape on pale ground, someone it took.
-            var canvas = kit.Box("SmallCanvas", root, L(0f, 1.3f, -0.05f), new Vector3(0.8f, 0.95f, 0.04f), canvasMat, true, rotation * Quaternion.Euler(-8f, 0f, 0f));
-            var figure = kit.Box("Figure", root, L(0f, 1.25f, -0.08f), new Vector3(0.22f, 0.6f, 0.01f), kit.Get("M_Painting_Figure", new Color(0.06f, 0.05f, 0.05f), 0.05f), false, rotation * Quaternion.Euler(-8f, 0f, 0f));
-            legs.Add(canvas.GetComponent<Renderer>());
-            legs.Add(figure.GetComponent<Renderer>());
-            foreach (var r in legs)
-                r.transform.SetParent(root, true);
-
-            var fire = GrayboxKit.PointLight("Fire", root, L(0f, 1.4f, -0.4f), new Color(1f, 0.45f, 0.12f), 6f, 9f);
-            fire.transform.SetParent(root, true);
-            var anchor = canvas.AddComponent<BanishAnchor>();
-            SerializedFields.SetArray(anchor, "burnRenderers", legs.ConvertAll(r => (Object)r));
-            SerializedFields.Set(anchor, "fire", fire);
-            return anchor;
         }
 
         /// <summary>

@@ -15,6 +15,7 @@ namespace HorrorGame.Painting
         [Tooltip("Real door: where you stand once inside. False door: ignored (you land somewhere in the field).")]
         [SerializeField] Transform inside;
         [SerializeField] string prompt = "Open the church door";
+        [SerializeField] string lockedPrompt = "It won't open. The song isn't finished";
 
         public bool IsReal => isReal;
 
@@ -24,11 +25,16 @@ namespace HorrorGame.Painting
             set => realm = value;
         }
 
-        public string GetPrompt(PlayerInteractor interactor) =>
-            realm != null && realm.State == PaintedRealm.RealmState.Inside ? prompt : null;
+        public string GetPrompt(PlayerInteractor interactor)
+        {
+            if (realm == null || realm.State != PaintedRealm.RealmState.Inside)
+                return null;
+            return isReal && !realm.ChordComplete ? lockedPrompt : prompt;
+        }
 
         public bool CanInteract(PlayerInteractor interactor) =>
-            realm != null && realm.State == PaintedRealm.RealmState.Inside && !realm.Busy;
+            realm != null && realm.State == PaintedRealm.RealmState.Inside && !realm.Busy
+            && (!isReal || realm.ChordComplete);
 
         public void Interact(PlayerInteractor interactor)
         {

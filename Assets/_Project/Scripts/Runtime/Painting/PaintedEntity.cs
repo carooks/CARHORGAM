@@ -16,7 +16,7 @@ namespace HorrorGame.Painting
     /// <see cref="Emerge"/> when the song stops and <see cref="Submerge"/> when it starts again.
     /// It does not chase. It walks slowly to the last sound it heard (footsteps, a burning easel),
     /// stops there to listen, then wanders on. Standing still and quiet lets it pass you; it only
-    /// kills someone it reaches while they are still making noise. Faster with every anchor burned.
+    /// kills someone it reaches while they are still making noise. Faster with every voice freed.
     /// The body is a placeholder built by the editor; swap in a model as a child.
     /// </summary>
     [RequireComponent(typeof(NavMeshAgent))]
@@ -26,9 +26,10 @@ namespace HorrorGame.Painting
         [Range(0f, 1f)] [SerializeField] float moveBelowPaint = 0.5f;
         [Tooltip("A slow walk. It never runs.")]
         [SerializeField] float baseSpeed = 1.5f;
-        [Tooltip("Added to the speed for every anchor burned.")]
+        [Tooltip("Added to the speed for every voice freed.")]
         [SerializeField] float speedPerBurn = 0.3f;
-        [SerializeField] float killDistance = 1.4f;
+        [Tooltip("Reach. Bigger than the distance it stops at to listen, so it can grab a noisy player it walks up to.")]
+        [SerializeField] float killDistance = 1.7f;
         [Tooltip("It only kills someone who made a sound this recently (seconds). Freeze and it passes you.")]
         [SerializeField] float quietGrace = 1.5f;
         [Tooltip("Seconds it stands listening where it heard the last sound before wandering on.")]
@@ -136,12 +137,27 @@ namespace HorrorGame.Painting
             Submerge();
         }
 
-        /// <summary>An anchor burned: it is faster from now on.</summary>
-        public void AddBurn()
+        /// <summary>Another voice joined the chord: it is angrier, and walks faster from now on.</summary>
+        public void Agitate()
         {
             burns++;
             if (agent.enabled)
                 agent.speed = Speed;
+        }
+
+        /// <summary>Stands up at a given spot (the finale, in front of the altar).</summary>
+        public void EmergeAt(Vector3 position)
+        {
+            if (!active || IsBanished)
+                return;
+            if (agent.enabled)
+                agent.Warp(position);
+            else
+                transform.position = position;
+            Hunting = true;
+            SetVisible(true);
+            FaceTarget();
+            breath.Play();
         }
 
         /// <summary>
@@ -270,7 +286,7 @@ namespace HorrorGame.Painting
             if (!hasGoal)
                 PickWanderPoint();
             float toGoal = Vector3.Distance(Flat(transform.position), Flat(goal));
-            if (toGoal <= 1.5f)
+            if (toGoal <= 1.0f)
             {
                 agent.isStopped = true;
                 agent.velocity = Vector3.zero;
