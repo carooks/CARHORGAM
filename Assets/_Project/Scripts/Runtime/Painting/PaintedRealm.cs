@@ -25,6 +25,10 @@ namespace HorrorGame.Painting
 
         [Header("Inside")]
         [SerializeField] PaintedEntity entity;
+        [Tooltip("Optional. Without a choir the entity hunts all the time.")]
+        [SerializeField] Choir choir;
+        [Tooltip("The frame you escape through; the choir points here once every anchor has burned.")]
+        [SerializeField] Transform exitPoint;
         [SerializeField] BanishAnchor[] anchors = Array.Empty<BanishAnchor>();
         [SerializeField] PaintAttention attention;
         [SerializeField] PaintFilter paintFilter;
@@ -42,7 +46,7 @@ namespace HorrorGame.Painting
 
         [Header("Feel")]
         [SerializeField] float fadeTime = 0.8f;
-        [SerializeField] string arrivalLine = "The paint is still wet.";
+        [SerializeField] string arrivalLine = "The paint is still wet. Somebody is singing.";
         [SerializeField] string trappedLine = "The frame won't move. Something here is holding it shut.";
         [SerializeField] string openLine = "The frame is open. RUN.";
         [SerializeField] string banishedLine = "The canvas is ash. Whatever lived in it is gone.";
@@ -75,6 +79,35 @@ namespace HorrorGame.Painting
         public PaintAttention Attention => attention;
         public PaintFilter Filter => paintFilter;
         public GameObject Player => player;
+        public Choir Choir => choir;
+
+        /// <summary>
+        /// Where the player should go next: the nearest anchor still standing, or the exit frame once
+        /// every anchor has burned. Null when there is nowhere to go.
+        /// </summary>
+        public Vector3? CurrentGoal
+        {
+            get
+            {
+                if (ExitOpen)
+                    return exitPoint != null ? exitPoint.position : (Vector3?)null;
+                Vector3 from = player != null ? player.transform.position : transform.position;
+                Vector3? best = null;
+                float bestDistance = float.MaxValue;
+                foreach (var anchor in anchors)
+                {
+                    if (anchor == null || !anchor.IsIntact)
+                        continue;
+                    float d = Vector3.Distance(from, anchor.transform.position);
+                    if (d < bestDistance)
+                    {
+                        bestDistance = d;
+                        best = anchor.transform.position;
+                    }
+                }
+                return best;
+            }
+        }
 
         /// <summary>Raised when the player escapes with the frame open and the entity is gone.</summary>
         public event Action Banished;
@@ -131,13 +164,17 @@ namespace HorrorGame.Painting
             State = RealmState.Inside;
             if (entity != null)
                 entity.Activate(player);
+            if (choir != null)
+                choir.Begin(player.transform);
+            else if (entity != null)
+                entity.Emerge(false, false);
             UpdateCounter();
             yield return Fade(1f, 0f);
             ShowSubtitle(arrivalLine, 4f);
             busy = false;
             yield return new WaitForSeconds(5f);
             if (State == RealmState.Inside && !ExitOpen)
-                ShowSubtitle("Burn the easels. All of them.", 4f);
+                ShowSubtitle("Burn the easels. Follow the singing.", 4f);
         }
 
         /// <summary>Climb out through the frame. Only works once every anchor has burned.</summary>
@@ -159,6 +196,8 @@ namespace HorrorGame.Painting
             if (banished && entity != null)
                 entity.Banish();
             yield return Fade(0f, 1f);
+            if (choir != null)
+                choir.End();
             if (entity != null)
                 entity.Deactivate();
             if (banished)
@@ -248,7 +287,11 @@ namespace HorrorGame.Painting
             Burned++;
             UpdateCounter();
             if (entity != null)
-                entity.Enrage();
+                entity.AddBurn();
+            if (choir != null)
+                choir.FallSilent(true);
+            else if (entity != null)
+                entity.Emerge(true, true);
             if (Burned >= anchors.Length)
             {
                 ExitOpen = true;

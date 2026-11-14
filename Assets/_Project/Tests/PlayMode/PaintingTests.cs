@@ -74,6 +74,8 @@ namespace HorrorGame.Tests
             attention.enabled = true;
             attention.ResetAll(1f); // as if the player has been looking ahead all along
             entity.Activate(player);
+            entity.Emerge(false, false);
+            Assert.IsTrue(entity.Hunting);
 
             Vector3 start = entity.transform.position;
             yield return WaitSeconds(2f);
@@ -107,7 +109,9 @@ namespace HorrorGame.Tests
             realm.Enter(player, null);
             yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Inside, 5f, "take the player inside");
             Assert.That(Vector3.Distance(player.transform.position, arrival.position), Is.LessThan(0.1f));
-            attention.ResetAll(1f); // keep it pinned so it cannot interfere
+            // Freeze the paint fully finished everywhere, so the entity stays pinned and cannot interfere.
+            attention.enabled = false;
+            attention.ResetAll(1f);
 
             anchors[0].Ignite();
             yield return WaitFor(() => realm.Burned == 1, 5f, "burn the first anchor");
@@ -129,7 +133,57 @@ namespace HorrorGame.Tests
             Assert.IsFalse(realm.CanEnter, "A banished painting cannot be entered again.");
         }
 
+        [UnityTest]
+        public IEnumerator Choir_PointsAtTheNextEasel_AndWhenItFallsSilent_TheThingComesOut()
+        {
+            BuildArena();
+            var player = SpawnPlayer(new Vector3(0f, 0f, -10f), Vector3.forward, out var camera, out _);
+            var realm = SpawnRealm(camera, out var attention);
+            var entity = SpawnEntity(new Vector3(0f, 0f, 15f));
+            var anchor = Track(new GameObject("Anchor")).AddComponent<BanishAnchor>();
+            anchor.transform.position = new Vector3(12f, 0f, -10f); // due east of the player
+            var singerObject = Track(new GameObject("Singer"));
+            singerObject.transform.position = new Vector3(0f, 0f, 0f);
+            var singer = singerObject.AddComponent<ChoirSinger>();
+            var choir = Track(new GameObject("Choir")).AddComponent<Choir>();
+            choir.Configure(realm, entity, new[] { singer });
+            realm.Configure(Track(new GameObject("Arrival")).transform, entity, new[] { anchor }, attention, null);
+            SetField(realm, "choir", choir);
+            attention.enabled = true;
+            attention.ResetAll(1f);
+
+            realm.Enter(player, null);
+            yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Inside, 5f, "take the player inside");
+            Assert.AreEqual(Choir.ChoirState.Singing, choir.State);
+            Assert.IsTrue(singer.Singing);
+            Assert.IsFalse(entity.Hunting, "While they sing, nothing is out.");
+
+            yield return WaitSeconds(3f);
+            Vector3 look = singer.Head.forward;
+            Vector3 toAnchor = (anchor.transform.position - singer.transform.position).normalized;
+            Assert.That(Vector3.Angle(look, toAnchor), Is.LessThan(10f), "Every head should turn to the next easel.");
+
+            choir.FallSilent(false);
+            Assert.AreEqual(Choir.ChoirState.Silent, choir.State);
+            Assert.IsFalse(singer.Singing);
+            Assert.IsTrue(entity.Hunting, "When the song stops, the thing stands up.");
+            yield return WaitSeconds(0.5f);
+            Vector3 toEntity = entity.transform.position - singer.transform.position;
+            toEntity.y = 0f;
+            Assert.That(Vector3.Angle(singer.Head.forward, toEntity), Is.LessThan(10f), "Every head should snap to the thing.");
+
+            yield return WaitFor(() => choir.State == Choir.ChoirState.Singing, 15f, "start singing again");
+            Assert.IsFalse(entity.Hunting, "When the song comes back, it goes under.");
+        }
+
         // ------------------------------------------------------------------ helpers
+
+        static void SetField(object target, string name, object value)
+        {
+            var field = target.GetType().GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.IsNotNull(field, name);
+            field.SetValue(target, value);
+        }
 
         void BuildArena()
         {

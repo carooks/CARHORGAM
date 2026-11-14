@@ -20,8 +20,9 @@ namespace HorrorGame.EditorTools
     ///   Parlor   around the origin. A small shut-up front room in an old house: armchair, lamp,
     ///            boarded window, and the portrait on the north wall. Pixel filter on, as everywhere.
     ///   Realm    centred on <see cref="RealmOrigin"/>, far from everything else. The inside of the
-    ///            painting: a dusk field of tall grass, a dead farmhouse, fences, dead trees, three
-    ///            easels to burn and the entity. Seen through the oil-paint filter.
+    ///            painting: a dusk field of tall grass with a choir buried in it up to their necks,
+    ///            a dead farmhouse, fences, dead trees, three easels to burn, the thing that stands
+    ///            up when the singing stops, and the frame you escape through. Oil-paint filter.
     ///
     /// The portrait and its realm are built by <see cref="BuildPortrait"/> and <see cref="BuildRealm"/>,
     /// so they can be dropped into any other scene (a house in town) later.
@@ -259,7 +260,26 @@ namespace HorrorGame.EditorTools
                     Quaternion.Euler(0f, Mathf.Cos(i * 0.7f) * 18f, 0f));
             }
 
-            // Tall grass: thousands of strokes in the real thing; a few hundred clumps here. It hides the entity.
+            // Where the choir is buried: a line of them along the path, the rest scattered in the grass.
+            var spots = new List<Vector2>();
+            for (int i = 0; i < 7; i++)
+            {
+                float z = -24f + i * 9f;
+                float x = Mathf.Sin((z + 36f) / 6f * 0.7f) * 3f;
+                spots.Add(new Vector2(x + (i % 2 == 0 ? -2.6f : 2.6f), z));
+            }
+            while (spots.Count < 28)
+            {
+                var p = new Vector2(Rand(-45f, 45f), Rand(-30f, 42f));
+                bool clear = Vector2.Distance(p, new Vector2(0f, -34f)) > 6f;
+                foreach (var other in spots)
+                    clear &= Vector2.Distance(p, other) > 5f;
+                if (clear)
+                    spots.Add(p);
+            }
+
+            // Tall grass: thousands of strokes in the real thing; a few hundred clumps here. It hides the
+            // entity, but is cleared around each head so you can see the choir's faces.
             var field = GrayboxKit.Group("Grass", scenery).transform;
             for (int i = 0; i < 520; i++)
             {
@@ -267,7 +287,12 @@ namespace HorrorGame.EditorTools
                 float z = Rand(-RealmHalfSize + 2f, RealmHalfSize - 2f);
                 if (Mathf.Abs(x - Mathf.Sin((z + 36f) / 6f * 0.7f) * 3f) < 2f && z < 48f)
                     continue; // keep the path clear
-                float height = Rand(0.9f, 2.0f);
+                bool nearHead = false;
+                foreach (var spot in spots)
+                    nearHead |= Vector2.Distance(spot, new Vector2(x, z)) < 2f;
+                if (nearHead)
+                    continue;
+                float height = Rand(0.7f, 1.8f);
                 for (int b = 0; b < 3; b++)
                     kit.Box("Blade", field, P(x + Rand(-0.3f, 0.3f), z + Rand(-0.3f, 0.3f), height * 0.5f),
                         new Vector3(0.12f, height * Rand(0.8f, 1.1f), 0.12f), grass[rng.Next(grass.Length)], false,
@@ -334,8 +359,16 @@ namespace HorrorGame.EditorTools
                 BuildEasel(root, P(-7f, 28f), Quaternion.Euler(0f, 170f, 0f), realm),
             };
 
-            // The entity starts by the farmhouse door.
+            // The thing waits under the paint by the farmhouse door until the singing stops.
             var entity = BuildEntity(root, P(6f, 44f));
+
+            // The choir: heads buried to the neck, scattered through the grass and lining the path.
+            var choirRoot = GrayboxKit.Group("Choir", root).transform;
+            var choir = choirRoot.gameObject.AddComponent<Choir>();
+            var singers = new List<ChoirSinger>();
+            float[] chord = { 1f, 1.189f, 1.498f, 2f, 0.5f, 1.189f }; // a minor chord with a low drone
+            for (int i = 0; i < spots.Count; i++)
+                singers.Add(BuildSinger(choirRoot, P(spots[i].x, spots[i].y), chord[i % chord.Length], soil));
 
             // NavMesh for the entity, baked from colliders at runtime.
             var navMesh = new GameObject("RealmNavMesh");
@@ -366,6 +399,11 @@ namespace HorrorGame.EditorTools
 
             SerializedFields.Set(realm, "arrivalPoint", arrival);
             SerializedFields.Set(realm, "entity", entity);
+            SerializedFields.Set(realm, "choir", choir);
+            SerializedFields.Set(realm, "exitPoint", exit.transform);
+            SerializedFields.Set(choir, "realm", realm);
+            SerializedFields.Set(choir, "entity", entity);
+            SerializedFields.SetArray(choir, "singers", singers.ConvertAll(x => (Object)x));
             SerializedFields.SetArray(realm, "anchors", anchors);
             SerializedFields.Set(realm, "attention", attention);
             SerializedFields.Set(realm, "paintFilter", filter);
@@ -373,6 +411,49 @@ namespace HorrorGame.EditorTools
             SerializedFields.Set(realm, "realmLighting", lighting);
             SerializedFields.SetArray(realm, "outsideOnly", outsideOnly.ConvertAll(go => (Object)go));
             return realm;
+        }
+
+        /// <summary>A head buried to the neck: a mound of earth, the head, two dark eyes and a mouth that sings.</summary>
+        static ChoirSinger BuildSinger(Transform parent, Vector3 groundPos, float pitch, Material soil)
+        {
+            var skin = kit.Get("M_Painting_ChoirSkin", new Color(0.72f, 0.6f, 0.5f), 0.35f);
+            var dark = kit.Get("M_Painting_ChoirDark", new Color(0.03f, 0.015f, 0.015f), 0.6f);
+            var hair = kit.Get("M_Painting_ChoirHair", new Color(0.08f, 0.06f, 0.05f), 0.1f);
+            var root = GrayboxKit.Group("Singer", parent).transform;
+            root.SetPositionAndRotation(groundPos, Quaternion.Euler(0f, Rand(0f, 360f), 0f));
+
+            var mound = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            mound.name = "Mound";
+            mound.transform.SetParent(root, false);
+            mound.transform.localScale = new Vector3(1.1f, 0.35f, 1.1f);
+            mound.GetComponent<Renderer>().sharedMaterial = soil;
+            GameObjectUtility.SetStaticEditorFlags(mound, StaticEditorFlags.BatchingStatic);
+
+            var head = GrayboxKit.Group("Head", root).transform;
+            head.localPosition = new Vector3(0f, 0.32f, 0f);
+            Part(PrimitiveType.Sphere, "Skull", head, new Vector3(0f, 0f, 0f), new Vector3(0.3f, 0.36f, 0.32f), skin);
+            Part(PrimitiveType.Sphere, "Hair", head, new Vector3(0f, 0.08f, -0.03f), new Vector3(0.31f, 0.26f, 0.31f), hair);
+            Part(PrimitiveType.Cube, "EyeL", head, new Vector3(-0.065f, 0.04f, 0.15f), new Vector3(0.05f, 0.025f, 0.02f), dark);
+            Part(PrimitiveType.Cube, "EyeR", head, new Vector3(0.065f, 0.04f, 0.15f), new Vector3(0.05f, 0.025f, 0.02f), dark);
+            var mouth = Part(PrimitiveType.Sphere, "Mouth", head, new Vector3(0f, -0.08f, 0.145f), new Vector3(0.07f, 0.1f, 0.03f), dark);
+
+            var singer = root.gameObject.AddComponent<ChoirSinger>();
+            SerializedFields.Set(singer, "head", head);
+            SerializedFields.Set(singer, "mouth", mouth.transform);
+            SerializedFields.SetFloat(singer, "pitch", pitch);
+            return singer;
+
+            static GameObject Part(PrimitiveType type, string name, Transform parent, Vector3 local, Vector3 scale, Material material)
+            {
+                var go = GameObject.CreatePrimitive(type);
+                go.name = name;
+                go.transform.SetParent(parent, false);
+                go.transform.localPosition = local;
+                go.transform.localScale = scale;
+                go.GetComponent<Renderer>().sharedMaterial = material;
+                Object.DestroyImmediate(go.GetComponent<Collider>());
+                return go;
+            }
         }
 
         static void DeadTree(Transform parent, Vector3 basePos, Material wood)

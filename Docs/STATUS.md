@@ -116,6 +116,14 @@ Separate generated scene with a slice of the match factory (receiving room, mach
 room, stairwell, Foreman's office) and a reusable pixel filter. See
 [MatchFactoryInterior.md](MatchFactoryInterior.md). Compiles and builds in Unity 6000.0.58f2 (batch); not yet play-tested by hand.
 
+### Side milestone: haunted painting (in progress)
+
+Step into a cursed portrait: a dusk field with a choir buried to the neck. The world only
+finishes painting where you look. While the choir sings you're safe and their heads point the
+way; when they stop, something stands up in the wet paint behind you and can only move where
+you aren't looking. Burn three easels, then escape through the frame. Test scene, oil-paint
+filter, 4 play-mode tests. See [HauntedPainting.md](HauntedPainting.md).
+
 ### Next milestone
 
 After the Foreman is verified: Phase 3 milestone 2, environmental events and randomised scares,
