@@ -13,6 +13,9 @@ namespace HorrorGame.Player
         [SerializeField] bool startOn = true;
         [Tooltip("How tightly the beam follows the camera. Higher is stiffer; 0 disables the trailing.")]
         [SerializeField] float followSharpness = 16f;
+        [Tooltip("Degrees the beam points below the view direction. At eye height the road is hit at such a " +
+                 "shallow angle that a level beam barely lights it past 10 m; a small tilt puts the hotspot on the road ahead.")]
+        [SerializeField] float downTilt = 6f;
         [Range(0f, 1f)] [SerializeField] float clickVolume = 0.5f;
 
         Light beam;
@@ -43,11 +46,18 @@ namespace HorrorGame.Player
             if (input != null && input.FlashlightPressed)
                 SetOn(!IsOn);
 
-            if (followSharpness > 0f && transform.parent != null)
+            if (transform.parent != null)
             {
-                float t = 1f - Mathf.Exp(-followSharpness * Time.deltaTime);
-                smoothedRotation = Quaternion.Slerp(smoothedRotation, transform.parent.rotation, t);
-                transform.rotation = smoothedRotation;
+                if (followSharpness > 0f)
+                {
+                    float t = 1f - Mathf.Exp(-followSharpness * Time.deltaTime);
+                    smoothedRotation = Quaternion.Slerp(smoothedRotation, transform.parent.rotation, t);
+                }
+                else
+                {
+                    smoothedRotation = transform.parent.rotation;
+                }
+                transform.rotation = smoothedRotation * Quaternion.Euler(downTilt, 0f, 0f);
             }
         }
 
