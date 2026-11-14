@@ -51,6 +51,7 @@ namespace HorrorGame.EditorTools
             var environment = GrayboxKit.Group("Environment", null).transform;
             TownBlockoutBuilder.Build(environment, kit);
             FacilityBuilder.Build(environment, kit, TownBlockoutBuilder.FacilityOrigin);
+            MonsterBuilder.Build(kit, TownBlockoutBuilder.FacilityOrigin);
 
             ConfigureAtmosphere();
             CreateMoonlight();
