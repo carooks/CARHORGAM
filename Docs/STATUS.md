@@ -110,6 +110,12 @@ Written in a cloud session without a Unity Editor. Nothing below has been compil
 - The Foreman only exists in the Phase 1 facility. The new match factory interior scene (PR #4) has
   waypoints ready for him, but he isn't in it yet.
 
+### Side milestone: match factory interior (builds; not hand-tested)
+
+Separate generated scene with a slice of the match factory (receiving room, machine hall, burnt dip
+room, stairwell, Foreman's office) and a reusable pixel filter. See
+[MatchFactoryInterior.md](MatchFactoryInterior.md). Compiles and builds in Unity 6000.0.58f2 (batch); not yet play-tested by hand.
+
 ### Next milestone
 
 After the Foreman is verified: Phase 3 milestone 2, environmental events and randomised scares,
