@@ -125,6 +125,7 @@ namespace HorrorGame.EditorTools
             BuildMatchLitter(root);
             BuildMainBreaker(GrayboxKit.Group("MainBreaker", root).transform);
             BuildWaypoints();
+            MonsterBuilder.BuildInFactory(kit);
 
             ConfigureAtmosphere();
             CreateMoonlight();

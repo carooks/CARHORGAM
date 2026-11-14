@@ -34,6 +34,8 @@ a prop out. The build log lists how many Synty props were placed and how many fe
    lamps and your flashlight (F).
 
 Batch mode (Unity closed): `-executeMethod HorrorGame.EditorTools.FactoryInteriorBuilder.BuildBatch`.
+The Foreman (monster) is added by `MonsterBuilder.BuildInFactory`, which the builder calls. To replace only him:
+menu **Horror Game > Add or Replace Foreman in Match Factory**, or `-executeMethod HorrorGame.EditorTools.MonsterBuilder.AddToFactorySceneBatch`.
 
 ## Layout
 

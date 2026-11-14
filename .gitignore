@@ -4,6 +4,9 @@
 /[Oo]bj/
 /[Bb]uild/
 /[Bb]uilds/
+
+# Large art kept out of git (lives on Chad's PC; scenes fall back to graybox without it)
+/Assets/_Project/Art/Foreman/*.glb
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 /[Mm]emoryCaptures/
@@ -34,6 +37,10 @@
 Thumbs.db
 
 # Builds and crash reports
+/[Bb]uilds/
+
+# Large art kept out of git (lives on Chad's PC; scenes fall back to graybox without it)
+/Assets/_Project/Art/Foreman/*.glb
 *.apk
 *.aab
 *.unitypackage
