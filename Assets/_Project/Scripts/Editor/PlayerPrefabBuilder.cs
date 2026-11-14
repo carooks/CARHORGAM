@@ -68,10 +68,10 @@ namespace HorrorGame.EditorTools
             var beam = flashlightObject.AddComponent<Light>();
             beam.type = LightType.Spot;
             beam.color = new Color(1f, 0.95f, 0.85f);
-            beam.intensity = 45f;
-            beam.range = 40f;
-            beam.spotAngle = 62f;
-            beam.innerSpotAngle = 30f;
+            beam.intensity = 120f;
+            beam.range = 60f;
+            beam.spotAngle = 55f;
+            beam.innerSpotAngle = 24f;
             beam.shadows = LightShadows.Soft;
             beam.shadowStrength = 0.9f;
             flashlightObject.AddComponent<Flashlight>();

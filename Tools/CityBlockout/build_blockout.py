@@ -57,6 +57,11 @@ ROAD_CLASSES = {
     "living_street": (6.0, 0.04, "RoadStreet"),
     "service": (4.0, 0.03, "RoadService"),
 }
+# Street lamps: spacing along the road (metres) by road material; service roads get none.
+LAMP_SPACING = {"RoadMain": 32.0, "RoadStreet": 45.0}
+LAMP_SETBACK = 1.0      # pole distance outside the road edge
+LAMP_MIN_GAP = 14.0     # skip a lamp this close to another (overlapping ways, junctions)
+LAMP_DEAD_EVERY = 4     # every Nth lamp is dead, for unlit stretches
 SERVICE_WIDTHS = {"parking_aisle": 5.0, "driveway": 3.0, "alley": 4.0}
 
 DEFAULT_HEIGHT = {
@@ -447,6 +452,63 @@ def clip_polyline(pts, area, pad):
         math.hypot(r[k + 1][0] - r[k][0], r[k + 1][1] - r[k][1]) for k in range(len(r) - 1)) > 0.5]
 
 
+def place_lamps(groups, buildings, area):
+    """Lamp posts along main and named streets, alternating sides, arm pointing at the road."""
+    lamps = []
+    rings = [b["ring"] for b in buildings]
+    boxes = [(min(p[0] for p in r), max(p[0] for p in r), min(p[1] for p in r), max(p[1] for p in r)) for r in rings]
+
+    segs = [(a, b, width * 0.5 + 0.5) for items in groups.values() for _, runs, width, _ in items
+            for run in runs for a, b in zip(run, run[1:])]
+
+    def on_road(p):
+        for a, b, r in segs:
+            ex, ey = b[0] - a[0], b[1] - a[1]
+            ll = ex * ex + ey * ey
+            t = 0.0 if ll < 1e-9 else max(0.0, min(1.0, ((p[0] - a[0]) * ex + (p[1] - a[1]) * ey) / ll))
+            if math.hypot(p[0] - a[0] - ex * t, p[1] - a[1] - ey * t) < r:
+                return True
+        return False
+
+    def blocked(p):
+        if not in_area(p, area, -4.0) or on_road(p):
+            return True
+        if any(math.hypot(p[0] - l["x"], p[1] - l["z"]) < LAMP_MIN_GAP for l in lamps):
+            return True
+        for (x0, x1, y0, y1), ring in zip(boxes, rings):
+            if x0 - 1.5 <= p[0] <= x1 + 1.5 and y0 - 1.5 <= p[1] <= y1 + 1.5 and point_in_poly(p, ring):
+                return True
+        return False
+
+    count = 0
+    for mat in ("RoadMain", "RoadStreet"):
+        spacing = LAMP_SPACING[mat]
+        for _, runs, width, _ in groups[mat]:
+            for run in runs:
+                side = 1
+                carry = spacing * 0.5  # first lamp half a spacing in from the start
+                for a, b in zip(run, run[1:]):
+                    seg = math.hypot(b[0] - a[0], b[1] - a[1])
+                    if seg < 1e-6:
+                        continue
+                    dx, dy = (b[0] - a[0]) / seg, (b[1] - a[1]) / seg
+                    t = carry
+                    while t <= seg:
+                        cx, cy = a[0] + dx * t, a[1] + dy * t
+                        nx, ny = dy * side, -dx * side  # right of travel for side=1
+                        off = width * 0.5 + LAMP_SETBACK
+                        p = (cx + nx * off, cy + ny * off)
+                        if not blocked(p):
+                            lamps.append({"x": round(p[0], 2), "z": round(p[1], 2),
+                                          "ax": round(-nx, 3), "az": round(-ny, 3),
+                                          "on": count % LAMP_DEAD_EVERY != LAMP_DEAD_EVERY - 1})
+                            count += 1
+                            side = -side
+                        t += spacing
+                    carry = t - seg
+    return lamps
+
+
 def build(args):
     area = (-args.half_width, args.half_width, args.south, args.north)
     nodes, ways = load_osm()
@@ -593,6 +655,8 @@ def build(args):
             "footprint": [[round(p[0], 2), round(p[1], 2)] for p in ring],
         })
 
+    lamps = place_lamps(groups, buildings, area)
+
     os.makedirs(args.out, exist_ok=True)
     obj_path = os.path.join(args.out, "wadsworth_blockout.obj")
     nv, nt = obj.write(obj_path)
@@ -604,8 +668,9 @@ def build(args):
         obj.write_unity_json(args.unity_json, {
             "attribution": "Map data (c) OpenStreetMap contributors, ODbL. Microsoft Global ML Building Footprints, ODbL.",
             "originLat": ORIGIN_LAT, "originLon": ORIGIN_LON,
-            "xMin": x0, "xMax": x1, "zMin": y0, "zMax": y1})
+            "xMin": x0, "xMax": x1, "zMin": y0, "zMax": y1, "lamps": lamps})
         print(f"Unity data: {args.unity_json} ({os.path.getsize(args.unity_json) / 1e6:.1f} MB)")
+    print(f"Street lamps: {len(lamps)} ({sum(l['on'] for l in lamps)} working)")
     print(f"Roads: {road_count} segments, buildings: {len(buildings)} "
           f"({sum(b['src'] == 'osm' for b in buildings)} OSM, {sum(b['src'] == 'ms' for b in buildings)} Microsoft)")
     print(f"OBJ: {nv} vertices, {nt} triangles -> {obj_path} ({os.path.getsize(obj_path) / 1e6:.1f} MB)")

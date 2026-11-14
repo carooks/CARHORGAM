@@ -29,6 +29,15 @@ namespace HorrorGame.EditorTools
             public string attribution;
             public float xMin, xMax, zMin, zMax;
             public BlockoutObject[] objects;
+            public BlockoutLamp[] lamps;
+        }
+
+        [Serializable]
+        class BlockoutLamp
+        {
+            public float x, z;   // pole base
+            public float ax, az; // arm direction, towards the road
+            public bool on;      // dead lamps leave dark stretches
         }
 
         [Serializable]
@@ -146,6 +155,7 @@ namespace HorrorGame.EditorTools
             }
             AssetDatabase.SaveAssets();
 
+            int lampCount = CreateStreetLamps(root, kit, data);
             CreateMapEdges(root, data);
             Phase1SceneBuilder.ConfigureAtmosphere();
             // Lighter fog than the Phase 1 scene so the street layout can be judged at a distance.
@@ -159,7 +169,7 @@ namespace HorrorGame.EditorTools
 
             EditorSceneManager.SaveScene(scene, ProjectPaths.WadsworthScene);
             Debug.Log($"[Horror Game] Built {ProjectPaths.WadsworthScene}: {buildingCount} buildings, " +
-                      $"{data.objects.Length - buildingCount} ground/road objects. {data.attribution}");
+                      $"{data.objects.Length - buildingCount} ground/road objects, {lampCount} street lamps. {data.attribution}");
         }
 
         static Mesh BuildMesh(BlockoutObject obj)
@@ -222,6 +232,23 @@ namespace HorrorGame.EditorTools
                 case "Roof": return kit.Roof;
                 default: return kit.Concrete;
             }
+        }
+
+        static int CreateStreetLamps(Transform root, GrayboxKit kit, BlockoutData data)
+        {
+            if (data.lamps == null || data.lamps.Length == 0)
+            {
+                Debug.LogWarning("[Horror Game] No street lamps in the blockout data. Rerun Tools/CityBlockout/build_blockout.py.");
+                return 0;
+            }
+            var group = GrayboxKit.Group("StreetLamps", root).transform;
+            for (int i = 0; i < data.lamps.Length; i++)
+            {
+                var lamp = data.lamps[i];
+                kit.StreetLamp($"Lamp_{i:000}" + (lamp.on ? "" : "_Dead"), group,
+                    new Vector3(lamp.x, 0f, lamp.z), new Vector3(lamp.ax, 0f, lamp.az), lamp.on);
+            }
+            return data.lamps.Length;
         }
 
         static void CreateMapEdges(Transform root, BlockoutData data)

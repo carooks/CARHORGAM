@@ -204,15 +204,7 @@ namespace HorrorGame.EditorTools
 
         static void StreetLight(Transform parent, GrayboxKit kit, Vector3 basePosition, float armDirection, bool working, string id)
         {
-            const float poleHeight = 7f;
-            var light = GrayboxKit.Group($"StreetLight_{id}", parent).transform;
-            kit.Box("Pole", light, basePosition + Vector3.up * (poleHeight * 0.5f), new Vector3(0.2f, poleHeight, 0.2f), kit.Metal);
-            Vector3 head = basePosition + new Vector3(armDirection * 1.4f, poleHeight - 0.1f, 0f);
-            kit.Box("Arm", light, basePosition + new Vector3(armDirection * 0.7f, poleHeight - 0.1f, 0f), new Vector3(1.4f, 0.1f, 0.1f), kit.Metal, false);
-            kit.Box("Head", light, head + Vector3.down * 0.1f, new Vector3(0.6f, 0.12f, 0.3f), working ? kit.LampSodium : kit.Metal, false);
-            if (working)
-                GrayboxKit.SpotLight("Light", light, head + Vector3.down * 0.2f, Quaternion.Euler(90f, 0f, 0f),
-                    new Color(1f, 0.7f, 0.4f), 30f, 14f, 110f);
+            kit.StreetLamp($"StreetLight_{id}", parent, basePosition, new Vector3(armDirection, 0f, 0f), working);
         }
 
         static void BuildTrees(Transform root, GrayboxKit kit, System.Random rng, List<Rect> blocked)

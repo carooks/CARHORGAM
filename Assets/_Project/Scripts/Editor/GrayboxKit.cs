@@ -177,6 +177,41 @@ namespace HorrorGame.EditorTools
             return light;
         }
 
+        // Sodium street lamp: a wide downward spot so it throws a pool of light on the road
+        // (about 9 m radius, brightest under the head) rather than a point that only lights itself.
+        public const float StreetLampHeight = 7f;
+        public const float StreetLampIntensity = 80f;
+        public const float StreetLampRange = 18f;
+        public const float StreetLampAngle = 120f;
+        public static readonly Color SodiumColor = new Color(1f, 0.62f, 0.3f);
+
+        /// <summary>
+        /// Pole, arm and head standing at <paramref name="basePosition"/>, with the arm reaching
+        /// towards <paramref name="armDirection"/> (horizontal, usually towards the road centre).
+        /// A dead lamp gets an unlit head and no light.
+        /// </summary>
+        public GameObject StreetLamp(string name, Transform parent, Vector3 basePosition, Vector3 armDirection, bool working)
+        {
+            armDirection.y = 0f;
+            armDirection = armDirection.sqrMagnitude > 1e-4f ? armDirection.normalized : Vector3.right;
+            var facing = Quaternion.LookRotation(armDirection, Vector3.up);
+            const float h = StreetLampHeight;
+
+            var lamp = Group(name, parent).transform;
+            Box("Pole", lamp, basePosition + Vector3.up * (h * 0.5f), new Vector3(0.2f, h, 0.2f), Metal);
+            Box("Arm", lamp, basePosition + armDirection * 0.8f + Vector3.up * (h - 0.1f), new Vector3(0.1f, 0.1f, 1.6f), Metal, false, facing);
+            Vector3 head = basePosition + armDirection * 1.6f + Vector3.up * (h - 0.1f);
+            Box("Head", lamp, head + Vector3.down * 0.1f, new Vector3(0.3f, 0.12f, 0.6f), working ? LampSodium : Metal, false, facing);
+            if (working)
+            {
+                var light = SpotLight("Light", lamp, head + Vector3.down * 0.2f, Quaternion.Euler(90f, 0f, 0f),
+                    SodiumColor, StreetLampIntensity, StreetLampRange, StreetLampAngle);
+                // Soft wide edge, bright centre: the pool fades out instead of ending in a hard ring.
+                light.innerSpotAngle = StreetLampAngle * 0.35f;
+            }
+            return lamp.gameObject;
+        }
+
         /// <summary>Low-poly cone mesh (used for pine trees), saved once as an asset.</summary>
         public static Mesh ConeMesh()
         {

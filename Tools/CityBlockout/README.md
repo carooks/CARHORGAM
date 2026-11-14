@@ -21,6 +21,7 @@ Running the script also writes a top-down `out/wadsworth_preview.png` (not commi
 | `Intersections` | Patches that hide seams where roads meet |
 | `Parking`, `Water` | Mapped parking lots and the pond |
 | `Bldg_0000` ... | One object per building, biggest first, walls + roof as two submeshes |
+| `StreetLamps` | Sodium lamp posts along Route 94 (every 32 m) and named streets (every 45 m), alternating sides, every 4th one dead. Placed by the script, kept off roads and out of buildings |
 
 `Bldg_0000_Match_Factory` is the factory complex (raised to 14 m) and `Bldg_0001_Static_Building`
 is the long building across Route 94. Landmarks are matched by location in the script's `LANDMARKS` list,
