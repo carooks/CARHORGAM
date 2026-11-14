@@ -1,0 +1,182 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-7111042969798659684
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da692e001514ec24dbc4cca1949ff7e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 12
+  hdPluginSubTargetMaterialVersions:
+    m_Keys: []
+    m_Values: 
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_Wood_House_05
+  m_Shader: {fileID: -6465566751694194690, guid: 5f2d6c9d511fd154c814f6ac4cfb1526,
+    type: 3}
+  m_ValidKeywords:
+  - _DISABLE_SSR_TRANSPARENT
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 2225
+  stringTagMap:
+    MotionVector: User
+  disabledShaderPasses:
+  - TransparentDepthPrepass
+  - TransparentDepthPostpass
+  - TransparentBackface
+  - RayTracingPrepass
+  - MOTIONVECTORS
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _Albedo:
+        m_Texture: {fileID: 2800000, guid: dc50e934a6e1ea64eb9a0ed1fb80209e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Moss_Albedo:
+        m_Texture: {fileID: 2800000, guid: 2964c8841e36db84d98b8c4b27079fe5, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Moss_Normal:
+        m_Texture: {fileID: 2800000, guid: 2e6ad5b247ba5e84fb27ba66f1498a50, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Normal:
+        m_Texture: {fileID: 2800000, guid: e8634bd76bd5ded4db9689e2bcc04131, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ORM:
+        m_Texture: {fileID: 2800000, guid: a90785680d0b9bd4b88d103c15c28187, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RGB_Mask:
+        m_Texture: {fileID: 2800000, guid: 99958129234571446902665cf885942b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SampleTexture2D_bf19f85c590d411baf52dd2d25245477_Texture_1:
+        m_Texture: {fileID: 2800000, guid: 9a3f826801f1aa943890fbf6e5779d6d, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture2DAsset_55c529b398ca4107ba262164c6d9faf0_Out_0:
+        m_Texture: {fileID: 2800000, guid: b2db451d46547d74bb541bc42b62bbf3, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AddPrecomputedVelocity: 0
+    - _AlphaCutoffEnable: 0
+    - _AlphaDstBlend: 0
+    - _AlphaSrcBlend: 1
+    - _AlphaToMask: 0
+    - _AlphaToMaskInspectorValue: 0
+    - _B_Intensity: 0
+    - _B_Roughness: 0.5
+    - _Base_Brightness: 0.94
+    - _Base_Desaturate: 0.5
+    - _Base_Normal_Intensity: -0.14
+    - _Base_Rotation_Amount: 1
+    - _Base_Rough_Max: 0.7
+    - _Base_Rough_Min: 0.1
+    - _Base_Roughness: 1.1
+    - _Base_Tiling: 1
+    - _BlendMode: 0
+    - _Bottom_Brightness: 2
+    - _Bottom_Color_Switch: 0
+    - _Bottom_Gradient_Mask_Tiling: 0.5
+    - _ConservativeDepthOffsetEnable: 0
+    - _CullMode: 2
+    - _CullModeForward: 2
+    - _DepthOffsetEnable: 0
+    - _Dirt_Blend: 0.385714
+    - _Dirt_Switch_Vertex_Paint: 0
+    - _Dirt_Tiling: 0.5
+    - _DoubleSidedEnable: 0
+    - _DoubleSidedGIMode: 0
+    - _DoubleSidedNormalMode: 2
+    - _DstBlend: 0
+    - _EnableBlendModePreserveSpecularLighting: 1
+    - _EnableFogOnTransparent: 1
+    - _G_Intensity: 0
+    - _G_Roughness: 0.5
+    - _GradientFalloff: 32
+    - _GradientIntensity: 128
+    - _Gradient_Contrast: 0
+    - _Moss_Brightness: 0.5
+    - _Moss_Fuzzness: 1
+    - _Moss_Fuzzness_Power: 0.5
+    - _Moss_Roughness: 0.8
+    - _Moss_Switch: 0
+    - _Moss_Tiling: 1
+    - _OpaqueCullMode: 2
+    - _R_Intensity: 0
+    - _R_Roughness: 0.5
+    - _RayTracing: 0
+    - _ReceivesSSR: 1
+    - _ReceivesSSRTransparent: 0
+    - _RefractionModel: 0
+    - _RenderQueueType: 1
+    - _RequireSplitLighting: 0
+    - _Scale_UV2: 1
+    - _SrcBlend: 1
+    - _StencilRef: 0
+    - _StencilRefDepth: 8
+    - _StencilRefDistortionVec: 4
+    - _StencilRefGBuffer: 10
+    - _StencilRefMV: 40
+    - _StencilWriteMask: 6
+    - _StencilWriteMaskDepth: 8
+    - _StencilWriteMaskDistortionVec: 4
+    - _StencilWriteMaskGBuffer: 14
+    - _StencilWriteMaskMV: 40
+    - _SupportDecals: 1
+    - _SurfaceType: 0
+    - _TransparentBackfaceEnable: 0
+    - _TransparentCullMode: 2
+    - _TransparentDepthPostpassEnable: 0
+    - _TransparentDepthPrepassEnable: 0
+    - _TransparentSortPriority: 0
+    - _TransparentWritingMotionVec: 0
+    - _TransparentZWrite: 0
+    - _UseShadowThreshold: 0
+    - _Use_RGB_Mask: 0
+    - _ZTestDepthEqualForOpaque: 3
+    - _ZTestGBuffer: 4
+    - _ZTestTransparent: 4
+    - _ZWrite: 1
+    m_Colors:
+    - _B_Color: {r: 0, g: 0, b: 0, a: 0}
+    - _Base_Tint: {r: 0.737255, g: 0.737255, b: 0.737255, a: 0}
+    - _Dirt_Color_Intensity: {r: 0.45098037, g: 0.45098037, b: 0.45098037, a: 0}
+    - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
+    - _G_Color: {r: 0, g: 0, b: 0, a: 0}
+    - _Moss_Tint: {r: 0.737255, g: 0.737255, b: 0.737255, a: 0}
+    - _R_Color: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
