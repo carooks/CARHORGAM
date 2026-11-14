@@ -20,6 +20,8 @@ namespace HorrorGame.Painting
         [SerializeField] ScriptableRendererFeature feature;
         [Tooltip("How much of the full-screen smear to use when calm. The brushstrokes carry the look now; this only softens them. It rises to full as the entity closes in.")]
         [Range(0f, 1f)] [SerializeField] float calmStrength = 0.25f;
+        [Tooltip("Strength with the entity on top of you. Kept below full so you can still make out its shape.")]
+        [Range(0f, 1f)] [SerializeField] float dreadStrength = 0.55f;
 
         /// <summary>0 = calm, 1 = the entity is on top of you: heavier smears, running paint, red bleed.</summary>
         public float Dread { get; set; }
@@ -54,7 +56,7 @@ namespace HorrorGame.Painting
         {
             float dread = Mathf.Clamp01(Dread);
             Shader.SetGlobalFloat(DreadId, dread);
-            Shader.SetGlobalFloat(StrengthId, Mathf.Clamp01(Strength) * Mathf.Lerp(calmStrength, 1f, dread));
+            Shader.SetGlobalFloat(StrengthId, Mathf.Clamp01(Strength) * Mathf.Lerp(calmStrength, dreadStrength, dread));
         }
     }
 }

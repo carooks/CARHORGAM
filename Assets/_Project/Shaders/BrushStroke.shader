@@ -58,8 +58,8 @@ Shader "HorrorGame/BrushStroke"
             float AttentionAt(float yawDegrees)
             {
                 float f = frac(yawDegrees / 360.0) * 64.0;
-                int a = (int)floor(f) % 64;
-                int b = (a + 1) % 64;
+                uint a = (uint)floor(f) % 64u;
+                uint b = (a + 1u) % 64u;
                 return lerp(_PaintAttention[a], _PaintAttention[b], frac(f));
             }
 
@@ -118,7 +118,7 @@ Shader "HorrorGame/BrushStroke"
                     finished = AttentionAt(degrees(atan2(-toCam.x, -toCam.z)) + (r1 - 0.5) * 8.0);
                 float wet = 1.0 - saturate((finished - r0 * 0.85) * 6.0);
                 if (kind == KIND_RESTLESS)
-                    wet = max(wet, 0.5);
+                    wet = max(wet, 0.25);
                 if (kind == KIND_TRAIL)
                     wet = 0.0;
 
@@ -155,7 +155,7 @@ Shader "HorrorGame/BrushStroke"
                     }
                     float wobble = sin(time * 13.0 + r1 * 40.0) * dread * 0.3;
                     if (kind == KIND_RESTLESS)
-                        wobble += sin(time * 4.0 + r2 * 30.0) * 0.5;
+                        wobble += sin(time * 4.0 + r2 * 30.0) * 0.22;
                     side = cross(n, along);
                     along = along * cos(wobble) + side * sin(wobble);
                     side = cross(n, along);
@@ -166,7 +166,7 @@ Shader "HorrorGame/BrushStroke"
                     if (canRun)
                         center += g * wet * r1 * halfLen * 0.8 * frac(time * 0.07 + r2);
                     if (kind == KIND_RESTLESS)
-                        center += along * sin(time * 6.0 + r1 * 20.0) * halfLen * 0.5 + n * abs(sin(time * 9.0 + r2 * 10.0)) * 0.03;
+                        center += along * sin(time * 6.0 + r1 * 20.0) * halfLen * 0.25 + n * abs(sin(time * 9.0 + r2 * 10.0)) * 0.015;
                 }
 
                 // Two triangles: (-1,-1) (1,-1) (1,1) and (-1,-1) (1,1) (-1,1).
@@ -224,7 +224,7 @@ Shader "HorrorGame/BrushStroke"
                 }
                 // Dread: everything sours toward oxblood.
                 float3 blood = float3(0.35, 0.03, 0.02) * (0.3 + dot(colour, float3(0.299, 0.587, 0.114)) * 2.0);
-                colour = lerp(colour, blood, dread * 0.3);
+                colour = lerp(colour, blood, dread * 0.18);
 
                 o.color = float4(colour, r1);
                 o.info = float4(kind, wet, 0.0, 0.0);

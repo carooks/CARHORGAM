@@ -60,8 +60,8 @@ Shader "HorrorGame/PaintedRealm"
             float Attention(float yawDegrees)
             {
                 float f = frac(yawDegrees / 360.0) * PAINT_BINS;
-                int a = (int)floor(f) % PAINT_BINS;
-                int b = (a + 1) % PAINT_BINS;
+                uint a = (uint)floor(f) % (uint)PAINT_BINS;
+                uint b = (a + 1u) % (uint)PAINT_BINS;
                 return lerp(_PaintAttention[a], _PaintAttention[b], frac(f));
             }
 
@@ -99,7 +99,8 @@ Shader "HorrorGame/PaintedRealm"
                 float column = floor(uv.x * screen.x / (6.0 * pxScale));
                 float dripSpeed = 0.02 + Hash21(float2(column, 7.0)) * 0.08;
                 float drip = frac(Hash21(float2(column, 3.0)) + t * dripSpeed);
-                float run = (wet * 0.06 + dread * 0.035) * drip * Hash21(float2(column, 11.0));
+                // The brushstrokes do their own running now; this is only a faint extra.
+                float run = (wet * 0.012 + dread * 0.012) * drip * Hash21(float2(column, 11.0));
                 // The whole canvas breathes slightly, like wet oil under a lamp.
                 float2 wobble = float2(ValueNoise(uv * 3.0 + t * 0.2), ValueNoise(uv * 3.0 - t * 0.17)) - 0.5;
                 float2 baseUv = uv + float2(0.0, run) + wobble * (0.002 + 0.006 * dread + 0.004 * wet);

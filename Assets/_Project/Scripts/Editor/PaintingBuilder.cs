@@ -882,8 +882,8 @@ namespace HorrorGame.EditorTools
             source.moving = true;
             source.visibility = mesh != null ? mesh.GetComponent<Renderer>() : null;
             source.density = 260f;
-            source.length = new Vector2(0.12f, 0.3f);
-            source.width = new Vector2(0.04f, 0.08f);
+            source.length = new Vector2(0.08f, 0.18f);
+            source.width = new Vector2(0.035f, 0.065f);
             source.lift = 0.01f;
             source.sampleWorld = 0f;
             source.color = color;

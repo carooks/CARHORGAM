@@ -77,6 +77,7 @@ namespace HorrorGame.Painting.Strokes
         int nextDrip;
         bool started;
         Camera colorTextureCamera;
+        float generateSeconds;
 
         /// <summary>True once the strokes are on the GPU and can be drawn.</summary>
         public bool Ready { get; private set; }
@@ -121,7 +122,13 @@ namespace HorrorGame.Painting.Strokes
                 jobs.Add(StrokeJob.From(source, bone, 1000 + i * 7919));
             }
             boneMatrices = new Matrix4x4[FirstMovingBone + movingSources.Count];
-            generating = Task.Run(() => StrokeGenerator.Generate(jobs));
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            generating = Task.Run(() =>
+            {
+                var result = StrokeGenerator.Generate(jobs);
+                generateSeconds = (float)clock.Elapsed.TotalSeconds;
+                return result;
+            });
         }
 
         void Update()
@@ -166,7 +173,7 @@ namespace HorrorGame.Painting.Strokes
             props.SetBuffer(BonesId, bones);
             kernel = cullShader.FindKernel("Cull");
             Ready = true;
-            Debug.Log($"[Horror Game] Painted {staticCount:N0} brushstrokes.");
+            Debug.Log($"[Horror Game] Painted {staticCount:N0} brushstrokes in {generateSeconds:0.00} s.");
         }
 
         void LateUpdate()
