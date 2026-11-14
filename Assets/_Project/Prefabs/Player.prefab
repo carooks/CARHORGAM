@@ -266,6 +266,11 @@ GameObject:
   - component: {fileID: 7293046701579790039}
   - component: {fileID: 4645732274669907953}
   - component: {fileID: 6129909201446391911}
+  - component: {fileID: 8569612176514040884}
+  - component: {fileID: 2722966017274645240}
+  - component: {fileID: 7992763255586082008}
+  - component: {fileID: 3889681441636739748}
+  - component: {fileID: 1948859499925521622}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -397,6 +402,81 @@ MonoBehaviour:
   crosshairFocused: {r: 1, g: 1, b: 1, a: 0.9}
   crosshairIdleSize: 4
   crosshairFocusedSize: 7
+--- !u!114 &8569612176514040884
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8065041962822572397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73fb0c093edf499d8748267b4b221add, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHealth: 100
+--- !u!114 &2722966017274645240
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8065041962822572397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cf63215e93144f18b94e4384c9dbb68, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  walkStride: 1.7
+  sprintStride: 2.3
+  walkNoise: 5
+  sprintNoise: 13
+  landingNoise: 9
+  walkVolume: 0.35
+  sprintVolume: 0.6
+--- !u!114 &7992763255586082008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8065041962822572397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6b6fd67bdad4ceb8c1df9c9d575f3cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  headHeight: 1.6
+  chestHeight: 1.1
+  flashlight: {fileID: 0}
+--- !u!114 &3889681441636739748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8065041962822572397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 548c9f8803a44abba7b8ae7eaf42cc32, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  message: YOU WERE CAUGHT
+  stareTime: 0.6
+  restartDelay: 3.5
+--- !u!114 &1948859499925521622
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8065041962822572397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea48d2139f524f49b36c0040d87af098, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  visible: 0
 --- !u!1 &9142418095646305257
 GameObject:
   m_ObjectHideFlags: 0
