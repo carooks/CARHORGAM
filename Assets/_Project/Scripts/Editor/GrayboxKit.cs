@@ -50,8 +50,8 @@ namespace HorrorGame.EditorTools
             }
             AssetFolders.Ensure(ProjectPaths.Materials);
 
-            Ground = Get("M_Ground", new Color(0.13f, 0.16f, 0.11f), 0.05f);
-            Asphalt = Get("M_Asphalt", new Color(0.09f, 0.09f, 0.1f), 0.25f);
+            Ground = Get("M_Ground", new Color(0.22f, 0.26f, 0.19f), 0.05f);
+            Asphalt = Get("M_Asphalt", new Color(0.26f, 0.26f, 0.27f), 0.25f);
             RoadLine = Get("M_RoadLine", new Color(0.75f, 0.6f, 0.15f), 0.2f);
             Concrete = Get("M_Concrete", new Color(0.42f, 0.42f, 0.4f), 0.1f);
             ConcreteFloor = Get("M_ConcreteFloor", new Color(0.3f, 0.3f, 0.29f), 0.3f);
