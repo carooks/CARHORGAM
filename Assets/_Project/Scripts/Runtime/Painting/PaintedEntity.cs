@@ -1,5 +1,6 @@
 using HorrorGame.AI;
 using HorrorGame.Audio;
+using HorrorGame.Painting.Strokes;
 using HorrorGame.Player;
 using UnityEngine;
 using UnityEngine.AI;
@@ -17,7 +18,12 @@ namespace HorrorGame.Painting
     /// It does not chase. It walks slowly to the last sound it heard (footsteps, a burning easel),
     /// stops there to listen, then wanders on. Standing still and quiet lets it pass you; it only
     /// kills someone it reaches while they are still making noise. Faster with every voice freed.
-    /// The body is a placeholder built by the editor; swap in a model as a child.
+    ///
+    /// It is blind: the painter painted its eyes over in white, which is why it goes by sound. When
+    /// the choir falls silent the only voice left is its own, one sour note held against the chord,
+    /// so you can hear where it is. It never animates: it snaps into a new pose whenever nobody is
+    /// looking (<see cref="EntityPoser"/>), leaves wet black drips where it walks, and its strokes
+    /// never dry.
     /// </summary>
     [RequireComponent(typeof(NavMeshAgent))]
     public class PaintedEntity : MonoBehaviour
@@ -39,10 +45,24 @@ namespace HorrorGame.Painting
         [Tooltip("Distance at which dread (smear, red bleed) starts building.")]
         [SerializeField] float dreadDistance = 16f;
         [SerializeField] float banishTime = 2.2f;
+        [Tooltip("Seconds between pose snaps while it walks unseen.")]
+        [SerializeField] Vector2 poseInterval = new Vector2(0.6f, 1.2f);
+        [Tooltip("Snaps pose while unseen. Optional.")]
+        [SerializeField] EntityPoser poser;
+        [Tooltip("Where its drips are painted. Optional.")]
+        [SerializeField] BrushStrokeWorld strokes;
+        [Tooltip("Its one sour note, a tritone against the choir's chord.")]
+        [SerializeField] float humPitch = 0.707f;
+        [Range(0f, 1f)] [SerializeField] float humVolume = 0.55f;
 
         NavMeshAgent agent;
         AudioSource breath;
         AudioSource voice;
+        AudioSource hum;
+        float poseTimer;
+        bool listening;
+        Vector3 lastDrip;
+        int dripSide = 1;
         Renderer[] bodyRenderers;
         Transform target;
         PlayerHealth targetHealth;
@@ -66,6 +86,13 @@ namespace HorrorGame.Painting
         public float Speed => baseSpeed + burns * speedPerBurn;
         /// <summary>Where it is walking: the last sound it heard, or a wander point.</summary>
         public Vector3 Goal => goal;
+        public EntityPoser Poser => poser;
+
+        public void Configure(EntityPoser bodyPoser, BrushStrokeWorld strokeWorld)
+        {
+            poser = bodyPoser;
+            strokes = strokeWorld;
+        }
 
         void OnEnable() => Noise.Emitted += OnNoise;
         void OnDisable() => Noise.Emitted -= OnNoise;
@@ -110,6 +137,29 @@ namespace HorrorGame.Painting
             voice.spatialBlend = 0.6f;
             voice.maxDistance = 40f;
             voice.playOnAwake = false;
+
+            // The discord: one voice held a tritone off the chord, thick and torn.
+            // On its own child: audio filters affect every source on their object.
+            var humObject = new GameObject("Hum");
+            humObject.transform.SetParent(transform, false);
+            humObject.transform.localPosition = new Vector3(0f, 2.4f, 0f);
+            hum = humObject.AddComponent<AudioSource>();
+            hum.clip = ProceduralAudio.GetClip(ProceduralSound.ChoirVoice);
+            hum.loop = true;
+            hum.spatialBlend = 1f;
+            hum.minDistance = 2f;
+            hum.maxDistance = 32f;
+            hum.rolloffMode = AudioRolloffMode.Linear;
+            hum.pitch = humPitch;
+            hum.volume = humVolume;
+            hum.playOnAwake = false;
+            var torn = humObject.AddComponent<AudioDistortionFilter>();
+            torn.distortionLevel = 0.55f;
+            var buried = humObject.AddComponent<AudioLowPassFilter>();
+            buried.cutoffFrequency = 2200f;
+
+            if (poser == null)
+                poser = GetComponent<EntityPoser>();
             SetVisible(false);
         }
 
@@ -157,7 +207,9 @@ namespace HorrorGame.Painting
             Hunting = true;
             SetVisible(true);
             FaceTarget();
+            SnapPose(EntityPoser.Pose.Stretch);
             breath.Play();
+            StartHum();
         }
 
         /// <summary>
@@ -176,7 +228,10 @@ namespace HorrorGame.Painting
                 HearAt(target.position);
             SetVisible(true);
             FaceTarget();
+            SnapPose(EntityPoser.Pose.Stretch);
+            poseTimer = poseInterval.y;
             breath.Play();
+            StartHum();
             if (shriek)
                 voice.PlayOneShot(ProceduralAudio.GetClip(ProceduralSound.Screech), 1f);
         }
@@ -192,6 +247,7 @@ namespace HorrorGame.Painting
                 agent.velocity = Vector3.zero;
             }
             breath.Stop();
+            hum.Stop();
             if (Realm != null && Realm.Filter != null)
                 Realm.Filter.Dread = 0f;
             if (!banishing)
@@ -228,6 +284,7 @@ namespace HorrorGame.Painting
             if (agent.enabled && agent.isOnNavMesh)
                 agent.isStopped = true;
             breath.Stop();
+            hum.Stop();
             voice.pitch = 0.6f;
             voice.PlayOneShot(ProceduralAudio.GetClip(ProceduralSound.Screech), 1f);
         }
@@ -261,6 +318,7 @@ namespace HorrorGame.Painting
             if (CanMove)
             {
                 Walk();
+                UpdatePose(distance);
                 bool heardYou = Time.time - lastTargetNoiseTime <= quietGrace;
                 if (distance <= killDistance && heardYou && targetHealth != null && targetHealth.IsAlive)
                 {
@@ -268,6 +326,7 @@ namespace HorrorGame.Painting
                     Hunting = false;
                     agent.isStopped = true;
                     breath.Stop();
+                    hum.Stop();
                     voice.PlayOneShot(ProceduralAudio.GetClip(ProceduralSound.Screech), 1f);
                     targetHealth.TakeHit(targetHealth.MaxHealth * 10f, gameObject);
                 }
@@ -291,16 +350,70 @@ namespace HorrorGame.Painting
                 agent.isStopped = true;
                 agent.velocity = Vector3.zero;
                 listenTimer += Time.deltaTime;
+                if (!listening)
+                {
+                    listening = true;
+                    SnapPose(EntityPoser.Pose.Listen);
+                }
                 if (listenTimer >= listenTime)
                     PickWanderPoint();
                 return;
             }
+            listening = false;
             agent.isStopped = false;
+            LeaveDrips();
             agent.SetDestination(goal);
             Vector3 v = agent.desiredVelocity;
             v.y = 0f;
             if (v.sqrMagnitude > 0.01f)
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(v.normalized), 180f * Time.deltaTime);
+        }
+
+        /// <summary>While nobody is looking it keeps snapping into new poses, never seen in between.</summary>
+        void UpdatePose(float distanceToTarget)
+        {
+            if (poser == null || listening)
+                return;
+            poseTimer -= Time.deltaTime;
+            if (poseTimer > 0f)
+                return;
+            poseTimer = Random.Range(poseInterval.x, poseInterval.y);
+            SnapPose(EntityPoser.NextWalkingPose(poser.Current, distanceToTarget, () => Random.value));
+        }
+
+        void SnapPose(EntityPoser.Pose pose)
+        {
+            if (poser == null)
+                return;
+            bool close = target != null && Vector3.Distance(transform.position, target.position) < 14f;
+            poser.Snap(pose, close ? target : null);
+            // A wet slap of paint when it shifts close by: you hear it move, you never see it.
+            if (close && Hunting && voice != null)
+                voice.PlayOneShot(ProceduralAudio.GetClip(ProceduralSound.HeavyStep), 0.35f);
+        }
+
+        void StartHum()
+        {
+            if (hum != null && !hum.isPlaying)
+            {
+                hum.pitch = humPitch;
+                hum.Play();
+            }
+        }
+
+        /// <summary>Wet black drips where it walks, alternating feet.</summary>
+        void LeaveDrips()
+        {
+            if (strokes == null)
+                return;
+            Vector3 here = transform.position;
+            if ((here - lastDrip).sqrMagnitude < 0.45f * 0.45f)
+                return;
+            lastDrip = here;
+            dripSide = -dripSide;
+            Vector3 side = transform.right * (0.16f * dripSide);
+            strokes.AddDrip(here + side + Vector3.up * 0.01f, transform.forward);
+            strokes.AddDrip(here + side * 0.6f + transform.forward * 0.12f + Vector3.up * 0.01f, transform.forward, 0.6f);
         }
 
         void PickWanderPoint()

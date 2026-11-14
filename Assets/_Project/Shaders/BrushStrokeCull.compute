@@ -1,0 +1,45 @@
+// Picks which brushstrokes to draw this frame: drops hidden ones, ones off screen, ones lost in the fog,
+// and thins out distant ones. Survivors' indices are appended to _VisibleOut for BrushStroke.shader.
+#pragma kernel Cull
+
+#include "BrushStrokeCommon.hlsl"
+
+StructuredBuffer<Stroke> _Strokes;
+StructuredBuffer<float4x4> _Bones;
+AppendStructuredBuffer<uint> _VisibleOut;
+
+float4 _Planes[4];
+float3 _CullCameraPos;
+uint _StrokeCount;
+float _StrokeMaxDistance;
+
+[numthreads(256, 1, 1)]
+void Cull(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= _StrokeCount)
+        return;
+    Stroke s = _Strokes[i];
+    float4x4 bone = _Bones[StrokeBone(s)];
+    if (BoneHidden(bone))
+        return;
+    float3 p = mul(bone, float4(s.position, 1.0)).xyz;
+    uint kind = StrokeKind(s);
+    float2 halfSize = UnpackHalfSize(s.size);
+    // Generous: wet strokes grow, distant ones are drawn bigger, grass stands up from its root.
+    float radius = max(halfSize.x, halfSize.y) * 4.0 + 0.25;
+    if (kind != KIND_SKY)
+    {
+        float d = distance(p, _CullCameraPos);
+        if (d > _StrokeMaxDistance)
+            return;
+        if (StrokeRandom(i, 7) > LodFraction(d))
+            return;
+    }
+    [unroll] for (int k = 0; k < 4; k++)
+    {
+        if (dot(_Planes[k].xyz, p) + _Planes[k].w < -radius)
+            return;
+    }
+    _VisibleOut.Append(i);
+}

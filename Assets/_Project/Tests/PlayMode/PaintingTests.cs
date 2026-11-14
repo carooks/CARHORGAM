@@ -96,6 +96,28 @@ namespace HorrorGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator Entity_OnlyChangesPoseWhileNobodyIsLooking()
+        {
+            BuildArena();
+            var player = SpawnPlayer(new Vector3(0f, 0f, -10f), Vector3.forward, out var camera, out _);
+            var realm = SpawnRealm(camera, out var attention);
+            var entity = SpawnEntity(new Vector3(0f, 0f, 6f), withPoser: true);
+            realm.Configure(Track(new GameObject("Arrival")).transform, entity, Array.Empty<MutedVoice>(), attention, null);
+            attention.enabled = true;
+            attention.ResetAll(1f);
+            entity.Activate(player);
+            entity.Emerge(false, false);
+            Assert.AreEqual(EntityPoser.Pose.Stretch, entity.Poser.Current, "It stands up to its full height when it comes out.");
+
+            int poses = entity.Poser.Changes;
+            yield return WaitSeconds(3f);
+            Assert.AreEqual(poses, entity.Poser.Changes, "Watched, it must not so much as twitch.");
+
+            player.transform.rotation = Quaternion.LookRotation(Vector3.back);
+            yield return WaitFor(() => entity.Poser.Changes > poses, 6f, "snap into a new pose once nobody is looking");
+        }
+
+        [UnityTest]
         public IEnumerator Entity_PassesAPlayerWhoStaysStillAndQuiet()
         {
             BuildArena();
@@ -287,13 +309,15 @@ namespace HorrorGame.Tests
             return go.AddComponent<PaintedRealm>();
         }
 
-        PaintedEntity SpawnEntity(Vector3 position)
+        PaintedEntity SpawnEntity(Vector3 position, bool withPoser = false)
         {
             var go = Track(new GameObject("TestEntity"));
             go.transform.position = position;
             var agent = go.AddComponent<NavMeshAgent>();
             agent.radius = 0.4f;
             agent.height = 2.6f;
+            if (withPoser)
+                go.AddComponent<EntityPoser>();
             return go.AddComponent<PaintedEntity>();
         }
 

@@ -36,6 +36,7 @@ choir buried up to their necks in the grass, singing.
      Walk to the altar: every voice at once, the thing stands up behind the altar and the sound
      destroys it. You are back in the parlor and the canvas is burnt.
 4. **F6** cycles the voice filter (off, half, full) so the raw synth voices can be compared.
+5. **F7** cycles brushstroke density (100%, 60%, 35%) to check the frame rate.
 
 ## How it works
 
@@ -44,11 +45,12 @@ choir buried up to their necks in the grass, singing.
 | The portrait you press E on (wakes, empties, burns) | `Runtime/Painting/HauntedPainting.cs`, `Shaders/HauntedPortrait.shader` |
 | Entering and leaving, atmosphere swap, voices, churches, finale, subtitles | `Runtime/Painting/PaintedRealm.cs` |
 | "Paints only where you look": 64 compass directions, each 0 (wet) to 1 (finished) | `Runtime/Painting/PaintAttention.cs` |
-| Oil-paint look: rotated, stretched Kuwahara filter plus wet underpainting, drips, dread | `Shaders/PaintedRealm.shader`, `Runtime/Painting/PaintFilter.cs` |
+| Brushstrokes: every surface, the grass and the sky are GPU-drawn strokes that paint in where you look | `Runtime/Painting/Strokes/*`, `Shaders/BrushStroke.shader`, `Shaders/BrushStrokeCull.compute` |
+| Light full-screen smear on top (full strength only when the thing is close) | `Shaders/PaintedRealm.shader`, `Runtime/Painting/PaintFilter.cs` |
 | The choir: guidance, tuning, anger, silences, voice filter | `Runtime/Painting/Choir.cs` |
 | One singer: voice, head, mouth, filters | `Runtime/Painting/ChoirSinger.cs` |
 | A painted-over mouth you scrape free | `Runtime/Painting/MutedVoice.cs` |
-| The thing (placeholder body, swappable) | `Runtime/Painting/PaintedEntity.cs` |
+| The thing: blind, hunts by sound, hums the sour note, snaps pose only while unseen | `Runtime/Painting/PaintedEntity.cs`, `Runtime/Painting/EntityPoser.cs` |
 | Church doors | `Runtime/Painting/ChurchDoor.cs` |
 | Scene generator | `Editor/PaintingBuilder.cs` |
 | Tests (6) | `Tests/PlayMode/PaintingTests.cs` |
@@ -66,6 +68,31 @@ choir buried up to their necks in the grass, singing.
   and filters, so no scene loading. Wrong Doors can reuse this.
 - The paint filter is a URP **Full Screen Pass** renderer feature named `PaintedRealm` on
   `URP_Horror_Renderer`, off except while inside. The pixel filter is off inside.
+
+## Brushstrokes
+
+The world is painted with real strokes, not a screen filter. Each object in the painting has a
+`BrushStrokeSource` (density, stroke size, colour); the builder bakes the shapes it covers.
+`BrushStrokeWorld` on the realm generates all strokes on a worker thread at scene start (about
+700,000), and each frame a compute shader keeps the ones on screen, inside the fog and not thinned
+out by distance; one indirect draw paints them.
+
+- **Colour** comes from the lit world under each stroke (the camera's opaque texture), so lights,
+  shadows and fog still work. Grass, brambles, the sky and the thing use their own paint colours.
+- **Look to paint:** strokes read `PaintAttention`. Unlooked-at strokes are wet: bigger, running
+  downhill, raw umber and bare canvas. Each dries at its own moment as you look.
+- **Moving things** (heads, the white paint, the thing's limbs) keep their strokes in their own
+  space and follow their transform; hiding the renderer hides the strokes.
+- The full-screen Kuwahara pass now runs at 25% when calm and rises to full as the thing gets close.
+
+## The thing
+
+Blind: the painter painted its eyes over in white, which is why it goes by sound. When the choir
+falls silent the only voice left is its own, one sour note a tritone off the chord, so you hear
+where it is. About 3.8 m standing, arms to the ground, brush-bristle fingers, a black gash of a
+mouth. It never animates: while unseen it snaps between poses (hung forward, lurching, reaching,
+listening with its head on its shoulder, crawling, stretched up), with a wet slap you hear but never
+see, and its head turns to face you. It leaves black drips where it walked.
 
 ## Open
 

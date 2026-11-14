@@ -18,6 +18,8 @@ namespace HorrorGame.Painting
 
         [Tooltip("The 'PaintedRealm' Full Screen Pass feature on URP_Horror_Renderer.")]
         [SerializeField] ScriptableRendererFeature feature;
+        [Tooltip("How much of the full-screen smear to use when calm. The brushstrokes carry the look now; this only softens them. It rises to full as the entity closes in.")]
+        [Range(0f, 1f)] [SerializeField] float calmStrength = 0.25f;
 
         /// <summary>0 = calm, 1 = the entity is on top of you: heavier smears, running paint, red bleed.</summary>
         public float Dread { get; set; }
@@ -50,8 +52,9 @@ namespace HorrorGame.Painting
 
         void Push()
         {
-            Shader.SetGlobalFloat(DreadId, Mathf.Clamp01(Dread));
-            Shader.SetGlobalFloat(StrengthId, Mathf.Clamp01(Strength));
+            float dread = Mathf.Clamp01(Dread);
+            Shader.SetGlobalFloat(DreadId, dread);
+            Shader.SetGlobalFloat(StrengthId, Mathf.Clamp01(Strength) * Mathf.Lerp(calmStrength, 1f, dread));
         }
     }
 }

@@ -3,6 +3,7 @@ using HorrorGame.AI;
 using HorrorGame.Audio;
 using HorrorGame.Interaction;
 using HorrorGame.Painting;
+using HorrorGame.Painting.Strokes;
 using HorrorGame.Rendering;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -22,7 +23,9 @@ namespace HorrorGame.EditorTools
     ///   Realm    centred on <see cref="RealmOrigin"/>, far from everything else. The inside of the
     ///            painting: a dusk field of tall grass with a choir buried in it up to their necks,
     ///            a dead farmhouse, fences, dead trees, three easels to burn, the thing that stands
-    ///            up when the singing stops, and the frame you escape through. Oil-paint filter.
+    ///            up when the singing stops, and the frame you escape through. Everything in it is
+    ///            covered in real brushstrokes (<see cref="BrushStrokeWorld"/>): every object gets a
+    ///            <see cref="BrushStrokeSource"/>, the grass and the sky are nothing but strokes.
     ///
     /// The portrait and its realm are built by <see cref="BuildPortrait"/> and <see cref="BuildRealm"/>,
     /// so they can be dropped into any other scene (a house in town) later.
@@ -36,6 +39,8 @@ namespace HorrorGame.EditorTools
         const string RealmPostFxPath = ProjectPaths.Settings + "/PostFX_Painting.asset";
         const string FilterMaterialPath = ProjectPaths.Materials + "/M_PaintedRealmFilter.mat";
         const string PortraitMaterialPath = ProjectPaths.Materials + "/M_HauntedPortrait.mat";
+        const string StrokeShaderPath = ProjectPaths.Root + "/Shaders/BrushStroke.shader";
+        const string StrokeCullPath = ProjectPaths.Root + "/Shaders/BrushStrokeCull.compute";
         public const string FeatureName = "PaintedRealm";
 
         public static readonly Vector3 RealmOrigin = new Vector3(1000f, 0f, 0f);
@@ -240,23 +245,20 @@ namespace HorrorGame.EditorTools
             var house = kit.Get("M_Painting_Farmhouse", new Color(0.36f, 0.33f, 0.28f), 0.05f);
             var roof = kit.Get("M_Painting_Roof", new Color(0.12f, 0.08f, 0.07f), 0.05f);
             var window = kit.Get("M_Painting_Window", new Color(0.9f, 0.6f, 0.25f), 0.3f, 0f, new Color(1f, 0.55f, 0.2f) * 1.5f);
-            var grass = new[]
-            {
-                kit.Get("M_Painting_Grass1", new Color(0.55f, 0.43f, 0.18f), 0.05f),
-                kit.Get("M_Painting_Grass2", new Color(0.42f, 0.36f, 0.14f), 0.05f),
-                kit.Get("M_Painting_Grass3", new Color(0.33f, 0.3f, 0.16f), 0.05f),
-            };
 
             Vector3 P(float x, float z, float y = 0f) => origin + new Vector3(x, y, z);
 
             // Ground, a worn path from where you arrive up to the farmhouse.
             var scenery = GrayboxKit.Group("Scenery", root).transform;
-            kit.Box("Ground", scenery, P(0f, 0f, -0.1f), new Vector3(RealmHalfSize * 2f, 0.2f, RealmHalfSize * 2f), soil);
+            var ground = kit.Box("Ground", scenery, P(0f, 0f, -0.1f), new Vector3(RealmHalfSize * 2f, 0.2f, RealmHalfSize * 2f), soil);
+            Strokes(ground, 9f, new Vector2(0.45f, 0.8f), new Vector2(0.12f, 0.2f), 0.18f);
+            var pathGroup = GrayboxKit.Group("Path", scenery);
+            Strokes(pathGroup, 22f, new Vector2(0.3f, 0.55f), new Vector2(0.08f, 0.14f), 0.2f).lift = 0.014f;
             for (int i = 0; i < 14; i++)
             {
                 float z = -36f + i * 6f;
                 float x = Mathf.Sin(i * 0.7f) * 3f;
-                kit.Box("Path", scenery, P(x, z, 0.005f), new Vector3(2.2f, 0.01f, 6.4f), path, false,
+                kit.Box("Path", pathGroup.transform, P(x, z, 0.005f), new Vector3(2.2f, 0.01f, 6.4f), path, false,
                     Quaternion.Euler(0f, Mathf.Cos(i * 0.7f) * 18f, 0f));
             }
 
@@ -278,27 +280,6 @@ namespace HorrorGame.EditorTools
                     spots.Add(p);
             }
 
-            // Tall grass: thousands of strokes in the real thing; a few hundred clumps here. It hides the
-            // entity, but is cleared around each head so you can see the choir's faces.
-            var field = GrayboxKit.Group("Grass", scenery).transform;
-            for (int i = 0; i < 520; i++)
-            {
-                float x = Rand(-RealmHalfSize + 2f, RealmHalfSize - 2f);
-                float z = Rand(-RealmHalfSize + 2f, RealmHalfSize - 2f);
-                if (Mathf.Abs(x - Mathf.Sin((z + 36f) / 6f * 0.7f) * 3f) < 2f && z < 48f)
-                    continue; // keep the path clear
-                bool nearHead = false;
-                foreach (var spot in spots)
-                    nearHead |= Vector2.Distance(spot, new Vector2(x, z)) < 2f;
-                if (nearHead)
-                    continue;
-                float height = Rand(0.7f, 1.8f);
-                for (int b = 0; b < 3; b++)
-                    kit.Box("Blade", field, P(x + Rand(-0.3f, 0.3f), z + Rand(-0.3f, 0.3f), height * 0.5f),
-                        new Vector3(0.12f, height * Rand(0.8f, 1.1f), 0.12f), grass[rng.Next(grass.Length)], false,
-                        Quaternion.Euler(Rand(-12f, 12f), Rand(0f, 180f), Rand(-12f, 12f)));
-            }
-
             // Four identical black churches in the fog. The path leads to a false one.
             var churches = GrayboxKit.Group("Churches", scenery).transform;
             var churchDoors = new List<ChurchDoor>
@@ -311,8 +292,77 @@ namespace HorrorGame.EditorTools
             var realDoor = churchDoors[3];
             SerializedFields.SetBool(realDoor, "isReal", true);
 
+            // Tall dusk grass, nothing but brushstrokes: upright blades that sway, hiding the entity
+            // up to the chest. Cleared along the path, around each head (so you can see the faces),
+            // around the churches and where you arrive.
+            var clearings = new List<Vector3>();
+            for (float z = -38f; z <= 50f; z += 1.2f)
+                clearings.Add(new Vector3(Mathf.Sin((z + 36f) / 6f * 0.7f) * 3f, z, 1.6f));
+            foreach (var spot in spots)
+                clearings.Add(new Vector3(spot.x, spot.y, 1.7f));
+            foreach (var door in churchDoors)
+            {
+                var church = door.transform.parent;
+                Vector3 Local(float x, float z) => church.TransformPoint(new Vector3(x, 0f, z)) - origin;
+                var nave = Local(0f, -7f);
+                var tower = Local(0f, 1.2f);
+                var front = Local(0f, 4.5f);
+                clearings.Add(new Vector3(nave.x, nave.z, 8.5f));
+                clearings.Add(new Vector3(tower.x, tower.z, 3.2f));
+                clearings.Add(new Vector3(front.x, front.z, 2.6f));
+            }
+            clearings.Add(new Vector3(0f, -35f, 3f));
+            var grassObject = GrayboxKit.Group("GrassStrokes", scenery);
+            grassObject.transform.position = origin;
+            var grass = grassObject.AddComponent<BrushStrokeSource>();
+            grass.kind = StrokeKind.Grass;
+            grass.density = 24f;
+            grass.length = new Vector2(0.5f, 1.55f);
+            grass.width = new Vector2(0.035f, 0.07f);
+            grass.sampleWorld = 0f;
+            grass.color = new Color(0.58f, 0.45f, 0.19f);
+            grass.color2 = new Color(0.3f, 0.27f, 0.13f);
+            grass.colorJitter = 0.25f;
+            grass.grassHalfSize = new Vector2(RealmHalfSize - 2f, RealmHalfSize - 2f);
+            grass.grassClearings = clearings.ToArray();
+
+            // Dead brambles: dark knots of thorny strokes in the grass.
+            var brambleMat = kit.Get("M_Painting_Bramble", new Color(0.06f, 0.045f, 0.035f), 0.05f);
+            var brambles = GrayboxKit.Group("Brambles", scenery);
+            var bramble = brambles.AddComponent<BrushStrokeSource>();
+            bramble.density = 40f;
+            bramble.length = new Vector2(0.15f, 0.35f);
+            bramble.width = new Vector2(0.04f, 0.09f);
+            bramble.sampleWorld = 0f;
+            bramble.color = new Color(0.09f, 0.06f, 0.04f);
+            bramble.color2 = new Color(0.17f, 0.08f, 0.05f);
+            bramble.colorJitter = 0.3f;
+            for (int placed = 0, tries = 0; placed < 36 && tries < 400; tries++)
+            {
+                var at = new Vector2(Rand(-52f, 52f), Rand(-52f, 52f));
+                bool free = true;
+                foreach (var c in clearings)
+                    free &= Vector2.Distance(at, new Vector2(c.x, c.y)) > c.z + 1.5f;
+                if (!free)
+                    continue;
+                placed++;
+                int lumps = rng.Next(3, 6);
+                for (int k = 0; k < lumps; k++)
+                {
+                    var lump = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    lump.name = "Bramble";
+                    Object.DestroyImmediate(lump.GetComponent<Collider>());
+                    lump.transform.SetParent(brambles.transform, false);
+                    float w = Rand(0.7f, 1.8f);
+                    lump.transform.position = P(at.x + Rand(-1f, 1f), at.y + Rand(-1f, 1f), Rand(0.1f, 0.5f));
+                    lump.transform.localScale = new Vector3(w, Rand(0.6f, 1.2f), w * Rand(0.7f, 1.2f));
+                    lump.GetComponent<Renderer>().sharedMaterial = brambleMat;
+                }
+            }
+
             // Fences along the path, half fallen.
             var fences = GrayboxKit.Group("Fences", scenery).transform;
+            Strokes(fences.gameObject, 60f, new Vector2(0.12f, 0.22f), new Vector2(0.04f, 0.07f), 0.25f);
             for (int side = -1; side <= 1; side += 2)
             for (int i = 0; i < 16; i++)
             {
@@ -328,6 +378,7 @@ namespace HorrorGame.EditorTools
 
             // Dead trees, black against the dusk.
             var trees = GrayboxKit.Group("DeadTrees", scenery).transform;
+            Strokes(trees.gameObject, 50f, new Vector2(0.15f, 0.3f), new Vector2(0.04f, 0.08f), 0.25f);
             foreach (var spot in new[] { new Vector2(-18f, 12f), new Vector2(20f, 30f), new Vector2(-30f, -20f), new Vector2(28f, -25f), new Vector2(-12f, 40f), new Vector2(35f, 10f) })
                 DeadTree(trees, P(spot.x, spot.y), wood);
 
@@ -343,6 +394,21 @@ namespace HorrorGame.EditorTools
             sunLight.shadows = LightShadows.Soft;
             var wind = CreateAmbience("RealmWind", 0.35f, 0.55f);
             wind.transform.SetParent(lighting.transform, false);
+
+            // A painted dusk sky: big swirling strokes on a dome that follows you, melting into the
+            // fog at the horizon, sour orange where the sun is going down.
+            var skyObject = GrayboxKit.Group("PaintedSky", root);
+            var sky = skyObject.AddComponent<BrushStrokeSource>();
+            sky.kind = StrokeKind.Sky;
+            sky.density = 9000f;
+            sky.length = new Vector2(9f, 18f);
+            sky.width = new Vector2(3f, 5.5f);
+            sky.sampleWorld = 0f;
+            sky.color = new Color(0.36f, 0.26f, 0.16f);
+            sky.colorJitter = 0.12f;
+            sky.skyZenith = new Color(0.09f, 0.06f, 0.08f);
+            sky.skyGlow = new Color(0.9f, 0.52f, 0.22f);
+            sky.skyGlowDirection = -(sun.transform.rotation * Vector3.forward);
 
             // Where you arrive: standing in front of the back of the frame you came through.
             var arrival = new GameObject("Arrival").transform;
@@ -391,14 +457,28 @@ namespace HorrorGame.EditorTools
                         best = i;
                 var singer = singers[best];
                 var head = singer.transform.Find("Head");
-                var paint = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                paint.name = "WhitePaint";
-                Object.DestroyImmediate(paint.GetComponent<Collider>());
-                paint.GetComponent<Renderer>().sharedMaterial = white;
+                // The paint sits on an unscaled pivot that carries its strokes; scraping it off hides both.
+                var paint = new GameObject("WhitePaint");
                 paint.transform.SetParent(head, false);
                 paint.transform.localPosition = new Vector3(0f, -0.06f, 0.15f);
                 paint.transform.localRotation = Quaternion.Euler(0f, 0f, Rand(-12f, 12f));
-                paint.transform.localScale = new Vector3(0.24f, 0.13f, 0.04f);
+                var smear = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                smear.name = "Smear";
+                Object.DestroyImmediate(smear.GetComponent<Collider>());
+                smear.GetComponent<Renderer>().sharedMaterial = white;
+                smear.transform.SetParent(paint.transform, false);
+                smear.transform.localScale = new Vector3(0.24f, 0.13f, 0.04f);
+                var paintStrokes = paint.AddComponent<BrushStrokeSource>();
+                paintStrokes.moving = true;
+                paintStrokes.visibility = smear.GetComponent<Renderer>();
+                paintStrokes.density = 2500f;
+                paintStrokes.length = new Vector2(0.05f, 0.1f);
+                paintStrokes.width = new Vector2(0.025f, 0.04f);
+                paintStrokes.lift = 0.016f;
+                paintStrokes.sampleWorld = 0f;
+                paintStrokes.color = new Color(0.92f, 0.9f, 0.85f);
+                paintStrokes.color2 = new Color(0.99f, 0.97f, 0.92f);
+                paintStrokes.colorJitter = 0.06f;
                 // A collider on the head so the interaction ray can find it.
                 var hit = head.gameObject.AddComponent<SphereCollider>();
                 hit.radius = 0.5f;
@@ -460,6 +540,14 @@ namespace HorrorGame.EditorTools
             SerializedFields.Set(realm, "realmVolume", volume);
             SerializedFields.Set(realm, "realmLighting", lighting);
             SerializedFields.SetArray(realm, "outsideOnly", outsideOnly.ConvertAll(go => (Object)go));
+
+            // The brushstrokes over all of it.
+            var strokeWorld = root.gameObject.AddComponent<BrushStrokeWorld>();
+            SerializedFields.Set(strokeWorld, "strokeShader", AssetDatabase.LoadAssetAtPath<Shader>(StrokeShaderPath));
+            SerializedFields.Set(strokeWorld, "cullShader", AssetDatabase.LoadAssetAtPath<ComputeShader>(StrokeCullPath));
+            SerializedFields.Set(strokeWorld, "attention", attention);
+            entity.Configure(entity.GetComponent<EntityPoser>(), strokeWorld);
+            BakeStrokeShapes(root);
             return realm;
         }
 
@@ -473,6 +561,7 @@ namespace HorrorGame.EditorTools
             var glow = kit.Get("M_Painting_ChurchGlow", new Color(0.6f, 0.05f, 0.03f), 0.3f, 0f, new Color(1f, 0.08f, 0.03f) * 2f);
             var doorMat = kit.Get("M_Painting_ChurchDoor", new Color(0.12f, 0.02f, 0.02f), 0.3f);
             var root = GrayboxKit.Group("BlackChurch", parent).transform;
+            Strokes(root.gameObject, 14f, new Vector2(0.5f, 0.9f), new Vector2(0.14f, 0.24f), 0.35f);
             var rot = Quaternion.Euler(0f, yaw, 0f);
             root.SetPositionAndRotation(position, rot);
             Vector3 L(float x, float y, float z) => root.TransformPoint(new Vector3(x, y, z));
@@ -522,6 +611,7 @@ namespace HorrorGame.EditorTools
             var cloth = kit.Get("M_Painting_AltarCloth", new Color(0.5f, 0.45f, 0.38f), 0.05f);
             var root = GrayboxKit.Group("ChurchInterior", parent).transform;
             root.position = origin;
+            Strokes(root.gameObject, 12f, new Vector2(0.5f, 0.9f), new Vector2(0.14f, 0.24f), 0.3f).skipDownFacing = false;
             Vector3 P(float x, float z, float y = 0f) => origin + new Vector3(x, y, z);
 
             const float halfWidth = 6.5f, length = 46f, height = 11f;
@@ -596,6 +686,7 @@ namespace HorrorGame.EditorTools
         static void BuildCanvasBack(Transform parent, Vector3 position)
         {
             var root = GrayboxKit.Group("CanvasBack", parent).transform;
+            Strokes(root.gameObject, 60f, new Vector2(0.1f, 0.2f), new Vector2(0.04f, 0.07f), 0.12f);
             var back = kit.Get("M_Painting_CanvasBack", new Color(0.5f, 0.44f, 0.33f), 0.05f);
             var gilt = kit.Get("M_Painting_Gilt", new Color(0.42f, 0.3f, 0.12f), 0.55f, 0.8f);
             kit.Box("Canvas", root, position + new Vector3(0f, 1.7f, 0f), new Vector3(2.2f, 3f, 0.05f), back);
@@ -618,6 +709,7 @@ namespace HorrorGame.EditorTools
             mound.transform.localScale = new Vector3(1.1f, 0.35f, 1.1f);
             mound.GetComponent<Renderer>().sharedMaterial = soil;
             GameObjectUtility.SetStaticEditorFlags(mound, StaticEditorFlags.BatchingStatic);
+            Strokes(mound, 30f, new Vector2(0.15f, 0.3f), new Vector2(0.05f, 0.09f), 0.2f);
 
             var head = GrayboxKit.Group("Head", root).transform;
             head.localPosition = new Vector3(0f, 0.32f, 0f);
@@ -626,6 +718,15 @@ namespace HorrorGame.EditorTools
             Part(PrimitiveType.Cube, "EyeL", head, new Vector3(-0.065f, 0.04f, 0.15f), new Vector3(0.05f, 0.025f, 0.02f), dark);
             Part(PrimitiveType.Cube, "EyeR", head, new Vector3(0.065f, 0.04f, 0.15f), new Vector3(0.05f, 0.025f, 0.02f), dark);
             var mouth = Part(PrimitiveType.Sphere, "Mouth", head, new Vector3(0f, -0.08f, 0.145f), new Vector3(0.07f, 0.1f, 0.03f), dark);
+            // Painted in small strokes that turn with the head; the mouth has its own, so it can open.
+            var headStrokes = Strokes(head.gameObject, 1100f, new Vector2(0.05f, 0.09f), new Vector2(0.02f, 0.035f), 0.2f);
+            headStrokes.moving = true;
+            headStrokes.lift = 0.004f;
+            headStrokes.visibility = head.Find("Skull").GetComponent<Renderer>();
+            var mouthStrokes = Strokes(mouth, 1100f, new Vector2(0.05f, 0.09f), new Vector2(0.02f, 0.035f), 0.1f);
+            mouthStrokes.moving = true;
+            mouthStrokes.lift = 0.006f;
+            mouthStrokes.visibility = mouth.GetComponent<Renderer>();
 
             var singer = root.gameObject.AddComponent<ChoirSinger>();
             SerializedFields.Set(singer, "head", head);
@@ -663,36 +764,62 @@ namespace HorrorGame.EditorTools
         }
 
         /// <summary>
-        /// Placeholder body: very tall and thin, a long dark coat, arms hanging past the knees, and
-        /// a head with the face wiped away into a pale smear. Replace with a model later.
+        /// The thing in the painting, roughly 3.8 m when it stands up straight. Long legs, a narrow
+        /// hunched body, a neck too long, arms that hang to the ground and end in brush-bristle
+        /// fingers. A long pale face with a white band of paint where the eyes were (the painter
+        /// blinded it, so it hunts by sound) over a mouth stretched open into a black gash. Built from
+        /// jointed pivots so <see cref="EntityPoser"/> can snap it between poses, and covered in
+        /// restless strokes that never dry. Replace the primitives with a model later.
         /// </summary>
         static PaintedEntity BuildEntity(Transform parent, Vector3 position)
         {
             var coat = kit.Get("M_Painting_EntityCoat", new Color(0.035f, 0.03f, 0.03f), 0.1f);
-            var skin = kit.Get("M_Painting_EntitySmear", new Color(0.66f, 0.55f, 0.45f), 0.6f);
+            var face = kit.Get("M_Painting_EntityFace", new Color(0.55f, 0.5f, 0.42f), 0.5f);
+            var hole = kit.Get("M_Painting_EntityMouth", new Color(0f, 0f, 0f), 0f);
+            var white = kit.Get("M_Painting_WhitePaint", new Color(0.92f, 0.9f, 0.85f), 0.7f);
+            var black = new Color(0.03f, 0.025f, 0.025f);
+            var oxblood = new Color(0.2f, 0.03f, 0.02f);
+
             var root = new GameObject("PaintedEntity");
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, 180f, 0f));
             var t = root.transform;
-            Vector3 L(float x, float y, float z) => t.TransformPoint(new Vector3(x, y, z));
 
-            Body(kit.Cylinder("Coat", t, L(0f, 1.05f, 0f), new Vector3(0.55f, 2.1f, 0.4f), coat, false));
-            Body(kit.Cylinder("Neck", t, L(0f, 2.25f, 0f), new Vector3(0.14f, 0.35f, 0.14f), skin, false));
-            Body(kit.Box("Shoulders", t, L(0f, 2.05f, 0f), new Vector3(0.75f, 0.18f, 0.32f), coat, false, t.rotation));
-            Body(kit.Box("ArmL", t, L(-0.42f, 1.25f, 0.02f), new Vector3(0.1f, 1.6f, 0.1f), coat, false, t.rotation * Quaternion.Euler(0f, 0f, -3f)));
-            Body(kit.Box("ArmR", t, L(0.42f, 1.25f, 0.02f), new Vector3(0.1f, 1.6f, 0.1f), coat, false, t.rotation * Quaternion.Euler(0f, 0f, 3f)));
-            Body(kit.Box("HandL", t, L(-0.45f, 0.38f, 0.02f), new Vector3(0.08f, 0.3f, 0.12f), skin, false, t.rotation));
-            Body(kit.Box("HandR", t, L(0.45f, 0.38f, 0.02f), new Vector3(0.08f, 0.3f, 0.12f), skin, false, t.rotation));
-            var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            head.name = "Head";
-            Object.DestroyImmediate(head.GetComponent<Collider>());
-            head.GetComponent<Renderer>().sharedMaterial = coat;
-            head.transform.SetParent(t, false);
-            head.transform.localPosition = new Vector3(0f, 2.55f, 0f);
-            head.transform.localScale = new Vector3(0.32f, 0.42f, 0.34f);
-            // The smear: the face dragged sideways off the head.
-            var smear = kit.Box("FaceSmear", t, L(0.08f, 2.55f, 0.15f), new Vector3(0.42f, 0.22f, 0.06f), skin, false, t.rotation * Quaternion.Euler(0f, 0f, -14f));
-            Body(smear);
+            var hips = Pivot("Hips", t, new Vector3(0f, 1.5f, 0f));
+            var legL = Limb("LegL", hips, new Vector3(-0.14f, 0f, 0f), new Vector3(0.11f, 1.56f, 0.11f));
+            var legR = Limb("LegR", hips, new Vector3(0.14f, 0f, 0f), new Vector3(0.11f, 1.56f, 0.11f));
+            var spine = Pivot("Spine", hips, new Vector3(0f, 0.05f, 0f));
+            BodyStrokes(spine, Part(PrimitiveType.Cube, "Torso", spine, new Vector3(0f, 0.55f, 0f), new Vector3(0.42f, 1.1f, 0.24f), coat), black, oxblood);
+            var neck = Pivot("Neck", spine, new Vector3(0f, 1.08f, 0f));
+            BodyStrokes(neck, Part(PrimitiveType.Cylinder, "NeckMesh", neck, new Vector3(0f, 0.35f, 0f), new Vector3(0.09f, 0.35f, 0.09f), coat), black, oxblood);
+            var head = Pivot("Head", neck, new Vector3(0f, 0.72f, 0f));
+            var skull = Part(PrimitiveType.Sphere, "Skull", head, new Vector3(0f, 0.2f, 0f), new Vector3(0.3f, 0.5f, 0.32f), face);
+            var headStrokes = BodyStrokes(head, skull, new Color(0.5f, 0.46f, 0.38f), new Color(0.62f, 0.55f, 0.44f));
+            headStrokes.density = 600f;
+            headStrokes.length = new Vector2(0.06f, 0.14f);
+            headStrokes.width = new Vector2(0.025f, 0.05f);
+            // The mouth: stretched open, a black gash down most of the face.
+            var mouth = Part(PrimitiveType.Sphere, "Mouth", head, new Vector3(0f, 0.08f, 0.13f), new Vector3(0.12f, 0.34f, 0.08f), hole);
+            var mouthStrokes = BodyStrokes(mouth.transform, mouth, new Color(0.004f, 0.003f, 0.003f), new Color(0.03f, 0.005f, 0.005f));
+            mouthStrokes.density = 900f;
+            mouthStrokes.lift = 0.02f;
+            mouthStrokes.length = new Vector2(0.05f, 0.1f);
+            mouthStrokes.width = new Vector2(0.02f, 0.04f);
+            // Its eyes, painted over in white like the choir's mouths.
+            var eyes = Part(PrimitiveType.Cube, "EyePaint", head, new Vector3(0f, 0.3f, 0.15f), new Vector3(0.3f, 0.09f, 0.05f), white, new Vector3(0f, 0f, -8f));
+            var eyeStrokes = BodyStrokes(eyes.transform, eyes, new Color(0.92f, 0.9f, 0.85f), new Color(0.99f, 0.97f, 0.92f));
+            eyeStrokes.kind = StrokeKind.Surface;
+            eyeStrokes.density = 2500f;
+            eyeStrokes.lift = 0.02f;
+            eyeStrokes.length = new Vector2(0.06f, 0.12f);
+            eyeStrokes.width = new Vector2(0.025f, 0.04f);
+            eyeStrokes.colorJitter = 0.06f;
+
+            Arm("L", -1f, out var shoulderL, out var elbowL, out var handL);
+            Arm("R", 1f, out var shoulderR, out var elbowR, out var handR);
+
+            var poser = root.AddComponent<EntityPoser>();
+            poser.Configure(hips, spine, neck, head, shoulderL, elbowL, handL, shoulderR, elbowR, handR, legL, legR);
 
             var agent = root.AddComponent<NavMeshAgent>();
             agent.radius = 0.4f;
@@ -700,10 +827,148 @@ namespace HorrorGame.EditorTools
             agent.enabled = false; // switched on when the player enters, after the NavMesh is baked
             return root.AddComponent<PaintedEntity>();
 
-            void Body(GameObject part)
+            void Arm(string side, float sign, out Transform shoulder, out Transform elbow, out Transform hand)
             {
-                part.transform.SetParent(t, true);
-                GameObjectUtility.SetStaticEditorFlags(part, 0); // it moves
+                shoulder = Limb("Shoulder" + side, spine, new Vector3(sign * 0.27f, 1.0f, 0f), new Vector3(0.08f, 0.95f, 0.08f));
+                elbow = Limb("Elbow" + side, shoulder, new Vector3(0f, -0.95f, 0f), new Vector3(0.07f, 0.95f, 0.07f));
+                hand = Pivot("Hand" + side, elbow, new Vector3(0f, -0.95f, 0f));
+                GameObject first = null;
+                for (int i = 0; i < 4; i++)
+                {
+                    var finger = Part(PrimitiveType.Cube, "Finger", hand, new Vector3(-0.045f + i * 0.03f, -0.2f, 0f),
+                        new Vector3(0.02f, 0.42f, 0.02f), coat, new Vector3(0f, 0f, (i - 1.5f) * 6f * sign));
+                    first ??= finger;
+                }
+                BodyStrokes(hand, first, black, oxblood).length = new Vector2(0.1f, 0.22f);
+            }
+
+            // A joint with one long box hanging (or standing) from it, and its strokes.
+            Transform Limb(string name, Transform parentJoint, Vector3 local, Vector3 size)
+            {
+                var joint = Pivot(name, parentJoint, local);
+                var mesh = Part(PrimitiveType.Cube, name + "Mesh", joint, new Vector3(0f, -size.y * 0.5f, 0f), size, coat);
+                BodyStrokes(joint, mesh, black, oxblood);
+                return joint;
+            }
+        }
+
+        static Transform Pivot(string name, Transform parent, Vector3 local)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = local;
+            return go.transform;
+        }
+
+        static GameObject Part(PrimitiveType type, string name, Transform parent, Vector3 local, Vector3 scale, Material material,
+            Vector3 euler = default)
+        {
+            var go = GameObject.CreatePrimitive(type);
+            go.name = name;
+            Object.DestroyImmediate(go.GetComponent<Collider>());
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = local;
+            go.transform.localRotation = Quaternion.Euler(euler);
+            go.transform.localScale = scale;
+            go.GetComponent<Renderer>().sharedMaterial = material;
+            return go;
+        }
+
+        /// <summary>Never-dry strokes that follow one of the entity's joints and vanish when it is hidden.</summary>
+        static BrushStrokeSource BodyStrokes(Transform joint, GameObject mesh, Color color, Color color2)
+        {
+            var source = joint.gameObject.AddComponent<BrushStrokeSource>();
+            source.kind = StrokeKind.Restless;
+            source.moving = true;
+            source.visibility = mesh != null ? mesh.GetComponent<Renderer>() : null;
+            source.density = 260f;
+            source.length = new Vector2(0.12f, 0.3f);
+            source.width = new Vector2(0.04f, 0.08f);
+            source.lift = 0.01f;
+            source.sampleWorld = 0f;
+            source.color = color;
+            source.color2 = color2;
+            source.colorJitter = 0.3f;
+            return source;
+        }
+
+        // ------------------------------------------------------------------ brushstrokes
+
+        /// <summary>Covers <paramref name="target"/> and its children in strokes coloured by the lit world under them.</summary>
+        static BrushStrokeSource Strokes(GameObject target, float density, Vector2 length, Vector2 width, float jitter)
+        {
+            var source = target.AddComponent<BrushStrokeSource>();
+            source.density = density;
+            source.length = length;
+            source.width = width;
+            source.colorJitter = jitter;
+            source.sampleWorld = 1f;
+            return source;
+        }
+
+        /// <summary>
+        /// Records the shapes each <see cref="BrushStrokeSource"/> covers: every mesh under it that no
+        /// nearer source claims. Unity's cube, sphere and cylinder are stored as exact shapes; any other
+        /// mesh is copied as triangles. Run after everything is placed.
+        /// </summary>
+        public static void BakeStrokeShapes(Transform root)
+        {
+            int count = 0;
+            foreach (var source in root.GetComponentsInChildren<BrushStrokeSource>(true))
+            {
+                var shapes = new List<StrokeShape>();
+                var tris = new List<Vector3>();
+                if (source.kind != StrokeKind.Grass && source.kind != StrokeKind.Sky)
+                {
+                    var toSource = source.transform.worldToLocalMatrix;
+                    foreach (var filter in source.GetComponentsInChildren<MeshFilter>(true))
+                    {
+                        if (filter.sharedMesh == null || filter.GetComponent<MeshRenderer>() == null || Owner(filter.transform) != source)
+                            continue;
+                        var matrix = toSource * filter.transform.localToWorldMatrix;
+                        var shape = new StrokeShape { matrix = matrix, detail = IsDetail(filter) };
+                        switch (filter.sharedMesh.name)
+                        {
+                            case "Cube": shape.type = StrokeShapeType.Box; break;
+                            case "Sphere": shape.type = StrokeShapeType.Sphere; break;
+                            case "Cylinder": shape.type = StrokeShapeType.Cylinder; break;
+                            default:
+                                shape.type = StrokeShapeType.Triangles;
+                                shape.matrix = Matrix4x4.identity;
+                                shape.triangleStart = tris.Count / 3;
+                                var mesh = filter.sharedMesh;
+                                var vertices = mesh.vertices;
+                                var indices = mesh.triangles;
+                                foreach (int index in indices)
+                                    tris.Add(matrix.MultiplyPoint3x4(vertices[index]));
+                                shape.triangleCount = indices.Length / 3;
+                                break;
+                        }
+                        shapes.Add(shape);
+                    }
+                }
+                source.SetShapes(shapes, tris.ToArray());
+                EditorUtility.SetDirty(source);
+                count++;
+            }
+            Debug.Log($"[Horror Game] Baked brushstroke shapes for {count} sources.");
+
+            static BrushStrokeSource Owner(Transform t)
+            {
+                for (; t != null; t = t.parent)
+                {
+                    var source = t.GetComponent<BrushStrokeSource>();
+                    if (source != null)
+                        return source;
+                }
+                return null;
+            }
+
+            // Eyes, a mouth: too small for ordinary strokes.
+            static bool IsDetail(MeshFilter filter)
+            {
+                var size = Vector3.Scale(filter.sharedMesh.bounds.size, filter.transform.lossyScale);
+                return Mathf.Max(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z)) < 0.12f;
             }
         }
 
