@@ -17,9 +17,12 @@ itself where you look. When the choir stops singing, something stands up in the 
      tune when you face that way and goes sour when you face away.
    - **Every 30 to 50 seconds, and every time an easel burns, they all stop at once and snap their
      heads to one spot** in the wet paint behind you. Something is standing there.
+   - **It does not chase.** It walks slowly to the last sound it heard (your footsteps carry 5 m
+     walking, 13 m sprinting; a burning easel 30 m), stops there to listen, then wanders on.
+     **Stand still and quiet and it passes you.** It only kills someone it reaches while they are
+     still making noise.
    - **It can only move where the paint is wet.** Follow the heads' eyes and look at it: it freezes.
-     Look away for more than about a second and it comes. After about 11 seconds the singing starts
-     again and it sinks back into the paint.
+     After about 11 seconds the singing starts again and it sinks back into the paint.
    - Press E at an easel to burn it. Every burn stops the song with a shriek and makes the thing faster.
    - The frame you came through will not open until all three easels are burnt. Then run back to
      it and press E to escape. Escaping breaks the curse: the portrait is left burnt.
@@ -39,7 +42,7 @@ itself where you look. When the choir stops singing, something stands up in the 
 | Easels / anything you burn | `Runtime/Painting/BanishAnchor.cs` |
 | The exit frame | `Runtime/Painting/RealmExit.cs` |
 | Scene generator | `Editor/PaintingBuilder.cs` |
-| Tests (4) | `Tests/PlayMode/PaintingTests.cs` |
+| Tests (5) | `Tests/PlayMode/PaintingTests.cs` |
 
 - The realm is built in the same scene, 1 km east of the parlor. Entering is a teleport plus a
   switch of fog, ambient light, post-processing and filters, so no scene loading and the player

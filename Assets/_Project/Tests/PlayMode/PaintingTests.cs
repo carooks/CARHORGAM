@@ -64,7 +64,7 @@ namespace HorrorGame.Tests
         }
 
         [UnityTest]
-        public IEnumerator Entity_IsPinnedWhileLookedAt_ComesWhenYouLookAway_AndKills()
+        public IEnumerator Entity_IsPinnedWhileLookedAt_WalksToSounds_AndKillsSomeoneNoisy()
         {
             BuildArena();
             var player = SpawnPlayer(new Vector3(0f, 0f, -10f), Vector3.forward, out var camera, out var health);
@@ -82,11 +82,38 @@ namespace HorrorGame.Tests
             Assert.That(Vector3.Distance(entity.transform.position, start), Is.LessThan(0.2f), "Looked at, it must not move.");
             Assert.IsFalse(entity.CanMove);
 
-            // Turn around. The paint behind us dissolves and it comes.
+            // Turn around and keep stamping. The paint behind dissolves, it hears us and walks over.
             player.transform.rotation = Quaternion.LookRotation(Vector3.back);
             yield return WaitFor(() => entity.CanMove, 3f, "be allowed to move once the paint there dissolves");
-            yield return WaitFor(() => !health.IsAlive, 15f, "reach the player and kill them");
+            float deadline = Time.time + 25f;
+            while (health.IsAlive && Time.time < deadline)
+            {
+                Noise.Emit(player.transform.position, 13f, player);
+                yield return WaitSeconds(0.4f);
+            }
+            Assert.IsFalse(health.IsAlive, "A noisy player it reaches should die.");
             Assert.AreSame(entity.gameObject, health.Killer);
+        }
+
+        [UnityTest]
+        public IEnumerator Entity_PassesAPlayerWhoStaysStillAndQuiet()
+        {
+            BuildArena();
+            var player = SpawnPlayer(new Vector3(0f, 0f, -10f), Vector3.back, out var camera, out var health);
+            var realm = SpawnRealm(camera, out var attention);
+            var entity = SpawnEntity(new Vector3(0f, 0f, 2f));
+            realm.Configure(Track(new GameObject("Arrival")).transform, entity, Array.Empty<BanishAnchor>(), attention, null);
+            attention.enabled = false;
+            attention.ResetAll(0f); // all wet: it can always move
+            entity.Activate(player);
+            entity.Emerge(false, false); // heads for where the player is standing
+
+            yield return WaitFor(() => Vector3.Distance(entity.transform.position, player.transform.position) < 2f, 20f,
+                "walk up to where the player was");
+            yield return WaitSeconds(8f);
+            Assert.IsTrue(health.IsAlive, "Standing still and quiet, it should pass you by.");
+            Assert.That(Vector3.Distance(entity.Goal, player.transform.position), Is.GreaterThan(3f),
+                "After listening it should wander off somewhere else.");
         }
 
         [UnityTest]

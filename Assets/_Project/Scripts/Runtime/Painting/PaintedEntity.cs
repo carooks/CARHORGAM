@@ -1,3 +1,4 @@
+using HorrorGame.AI;
 using HorrorGame.Audio;
 using HorrorGame.Player;
 using UnityEngine;
@@ -13,7 +14,9 @@ namespace HorrorGame.Painting
     ///
     /// It is only out while it is <see cref="Hunting"/>: the <see cref="Choir"/> calls
     /// <see cref="Emerge"/> when the song stops and <see cref="Submerge"/> when it starts again.
-    /// It walks a runtime NavMesh, kills on contact and gets faster with every anchor burned.
+    /// It does not chase. It walks slowly to the last sound it heard (footsteps, a burning easel),
+    /// stops there to listen, then wanders on. Standing still and quiet lets it pass you; it only
+    /// kills someone it reaches while they are still making noise. Faster with every anchor burned.
     /// The body is a placeholder built by the editor; swap in a model as a child.
     /// </summary>
     [RequireComponent(typeof(NavMeshAgent))]
@@ -21,12 +24,17 @@ namespace HorrorGame.Painting
     {
         [Tooltip("Below this much paint in its direction, it may move.")]
         [Range(0f, 1f)] [SerializeField] float moveBelowPaint = 0.5f;
-        [SerializeField] float baseSpeed = 3.6f;
+        [Tooltip("A slow walk. It never runs.")]
+        [SerializeField] float baseSpeed = 1.5f;
         [Tooltip("Added to the speed for every anchor burned.")]
-        [SerializeField] float speedPerBurn = 1.1f;
+        [SerializeField] float speedPerBurn = 0.3f;
         [SerializeField] float killDistance = 1.4f;
+        [Tooltip("It only kills someone who made a sound this recently (seconds). Freeze and it passes you.")]
+        [SerializeField] float quietGrace = 1.5f;
+        [Tooltip("Seconds it stands listening where it heard the last sound before wandering on.")]
+        [SerializeField] float listenTime = 2.5f;
         [Tooltip("How far behind the player it emerges.")]
-        [SerializeField] float emergeDistance = 9f;
+        [SerializeField] float emergeDistance = 13f;
         [Tooltip("Distance at which dread (smear, red bleed) starts building.")]
         [SerializeField] float dreadDistance = 16f;
         [SerializeField] float banishTime = 2.2f;
@@ -41,6 +49,10 @@ namespace HorrorGame.Painting
         int burns;
         bool active;
         bool banishing;
+        Vector3 goal;
+        bool hasGoal;
+        float listenTimer;
+        float lastTargetNoiseTime = -100f;
         float banishProgress;
 
         public PaintedRealm Realm { get; set; }
@@ -51,6 +63,30 @@ namespace HorrorGame.Painting
         public bool CanMove { get; private set; }
         public bool IsBanished { get; private set; }
         public float Speed => baseSpeed + burns * speedPerBurn;
+        /// <summary>Where it is walking: the last sound it heard, or a wander point.</summary>
+        public Vector3 Goal => goal;
+
+        void OnEnable() => Noise.Emitted += OnNoise;
+        void OnDisable() => Noise.Emitted -= OnNoise;
+
+        void OnNoise(NoiseEvent noise)
+        {
+            if (!Hunting)
+                return;
+            if (Vector3.Distance(Flat(noise.Position), Flat(transform.position)) > noise.Radius)
+                return;
+            HearAt(noise.Position);
+            if (target != null && noise.Source != null && noise.Source.transform == target)
+                lastTargetNoiseTime = Time.time;
+        }
+
+        /// <summary>It heard something at <paramref name="position"/> and walks there.</summary>
+        public void HearAt(Vector3 position)
+        {
+            goal = position;
+            hasGoal = true;
+            listenTimer = 0f;
+        }
 
         void Awake()
         {
@@ -119,6 +155,9 @@ namespace HorrorGame.Painting
             if (behindTarget)
                 MoveBehindTarget();
             Hunting = true;
+            // It starts toward where the player was when the song stopped, in case they were moving.
+            if (target != null)
+                HearAt(target.position);
             SetVisible(true);
             FaceTarget();
             breath.Play();
@@ -205,10 +244,9 @@ namespace HorrorGame.Painting
 
             if (CanMove)
             {
-                agent.isStopped = false;
-                agent.SetDestination(target.position);
-                FaceTarget();
-                if (distance <= killDistance && targetHealth != null && targetHealth.IsAlive)
+                Walk();
+                bool heardYou = Time.time - lastTargetNoiseTime <= quietGrace;
+                if (distance <= killDistance && heardYou && targetHealth != null && targetHealth.IsAlive)
                 {
                     active = false;
                     Hunting = false;
@@ -224,6 +262,40 @@ namespace HorrorGame.Painting
                 agent.isStopped = true;
                 agent.velocity = Vector3.zero;
             }
+        }
+
+        /// <summary>Walks to the last sound, listens there, then wanders to a nearby spot.</summary>
+        void Walk()
+        {
+            if (!hasGoal)
+                PickWanderPoint();
+            float toGoal = Vector3.Distance(Flat(transform.position), Flat(goal));
+            if (toGoal <= 1.5f)
+            {
+                agent.isStopped = true;
+                agent.velocity = Vector3.zero;
+                listenTimer += Time.deltaTime;
+                if (listenTimer >= listenTime)
+                    PickWanderPoint();
+                return;
+            }
+            agent.isStopped = false;
+            agent.SetDestination(goal);
+            Vector3 v = agent.desiredVelocity;
+            v.y = 0f;
+            if (v.sqrMagnitude > 0.01f)
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(v.normalized), 180f * Time.deltaTime);
+        }
+
+        void PickWanderPoint()
+        {
+            Vector2 r = Random.insideUnitCircle.normalized * Random.Range(6f, 12f);
+            Vector3 wanted = transform.position + new Vector3(r.x, 0f, r.y);
+            if (NavMesh.SamplePosition(wanted, out var hit, 4f, NavMesh.AllAreas))
+                wanted = hit.position;
+            goal = wanted;
+            hasGoal = true;
+            listenTimer = 0f;
         }
 
         void SetVisible(bool visible)

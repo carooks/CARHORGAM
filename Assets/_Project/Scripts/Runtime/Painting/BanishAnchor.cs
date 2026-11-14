@@ -1,3 +1,4 @@
+using HorrorGame.AI;
 using HorrorGame.Audio;
 using HorrorGame.Interaction;
 using UnityEngine;
@@ -22,6 +23,8 @@ namespace HorrorGame.Painting
         [SerializeField] Light fire;
         [SerializeField] float burnTime = 2.5f;
         [SerializeField] float fireIntensity = 6f;
+        [Tooltip("How far away the burn is heard when the canvas finally goes up, in metres.")]
+        [SerializeField] float noiseRadius = 30f;
 
         enum AnchorState { Intact, Burning, Burnt }
 
@@ -86,6 +89,8 @@ namespace HorrorGame.Painting
                     state = AnchorState.Burnt;
                     if (Realm != null)
                         Realm.OnAnchorBurned(this);
+                    // The canvas going up with a roar: anything listening comes to look.
+                    Noise.Emit(transform.position, noiseRadius, gameObject);
                 }
             }
             if (fire != null)
