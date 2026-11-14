@@ -72,6 +72,17 @@ namespace HorrorGame.Painting
                 entity.Emerge(true, shriek);
         }
 
+        /// <summary>Ends a silence early: the thing goes under and the song starts again.</summary>
+        public void ResumeSinging()
+        {
+            if (State != ChoirState.Silent)
+                return;
+            if (entity != null)
+                entity.Submerge();
+            timer = UnityEngine.Random.Range(singTime.x, singTime.y);
+            SetState(ChoirState.Singing);
+        }
+
         void Update()
         {
             if (State == ChoirState.Idle)

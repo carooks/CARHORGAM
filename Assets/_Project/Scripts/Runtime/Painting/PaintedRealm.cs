@@ -29,6 +29,12 @@ namespace HorrorGame.Painting
         [SerializeField] Choir choir;
         [Tooltip("The frame you escape through; the choir points here once every anchor has burned.")]
         [SerializeField] Transform exitPoint;
+        [Tooltip("Door of the one real church in the fog. Until you are inside, the choir points here. Optional.")]
+        [SerializeField] Transform realChurchDoor;
+        [Tooltip("Places in the field a false church door can drop you.")]
+        [SerializeField] Transform[] lostPoints = Array.Empty<Transform>();
+        [SerializeField] string falseDoorLine = "More field. The singing has stopped.";
+        [SerializeField] string churchLine = "They are all in here. The song is deafening.";
         [SerializeField] BanishAnchor[] anchors = Array.Empty<BanishAnchor>();
         [SerializeField] PaintAttention attention;
         [SerializeField] PaintFilter paintFilter;
@@ -80,6 +86,9 @@ namespace HorrorGame.Painting
         public PaintFilter Filter => paintFilter;
         public GameObject Player => player;
         public Choir Choir => choir;
+        public bool Busy => busy;
+        /// <summary>True once the player has found the real church.</summary>
+        public bool InChurch { get; private set; }
 
         /// <summary>
         /// Where the player should go next: the nearest anchor still standing, or the exit frame once
@@ -89,6 +98,8 @@ namespace HorrorGame.Painting
         {
             get
             {
+                if (realChurchDoor != null && !InChurch)
+                    return realChurchDoor.position;
                 if (ExitOpen)
                     return exitPoint != null ? exitPoint.position : (Vector3?)null;
                 Vector3 from = player != null ? player.transform.position : transform.position;
@@ -174,7 +185,7 @@ namespace HorrorGame.Painting
             busy = false;
             yield return new WaitForSeconds(5f);
             if (State == RealmState.Inside && !ExitOpen)
-                ShowSubtitle("Burn the easels. Follow the singing.", 4f);
+                ShowSubtitle(realChurchDoor != null ? "Follow the singing." : "Burn the easels. Follow the singing.", 4f);
         }
 
         /// <summary>Climb out through the frame. Only works once every anchor has burned.</summary>
@@ -277,6 +288,69 @@ namespace HorrorGame.Painting
                 player.transform.SetPositionAndRotation(position, rotation);
         }
 
+        // ------------------------------------------------------------------ the churches
+
+        /// <summary>A false church: the door opens onto more field somewhere else, and the singing stops.</summary>
+        public void FalseDoor(Vector3 doorPosition)
+        {
+            if (State != RealmState.Inside || busy)
+                return;
+            StartCoroutine(FalseDoorRoutine(doorPosition));
+        }
+
+        IEnumerator FalseDoorRoutine(Vector3 doorPosition)
+        {
+            busy = true;
+            yield return Fade(0f, 1f);
+            // Land at the lost point farthest from this door.
+            Transform best = null;
+            float bestDistance = -1f;
+            foreach (var point in lostPoints)
+            {
+                if (point == null)
+                    continue;
+                float d = Vector3.Distance(point.position, doorPosition);
+                if (d > bestDistance)
+                {
+                    bestDistance = d;
+                    best = point;
+                }
+            }
+            if (best != null)
+                Teleport(best.position, best.rotation);
+            if (attention != null)
+                attention.ResetAll();
+            yield return Fade(1f, 0f);
+            busy = false;
+            ShowSubtitle(falseDoorLine, 3.5f);
+            if (choir != null)
+                choir.FallSilent(true);
+        }
+
+        /// <summary>The real church: step inside for the last stretch.</summary>
+        public void EnterChurch(Transform inside)
+        {
+            if (State != RealmState.Inside || busy || inside == null)
+                return;
+            StartCoroutine(EnterChurchRoutine(inside));
+        }
+
+        IEnumerator EnterChurchRoutine(Transform inside)
+        {
+            busy = true;
+            yield return Fade(0f, 1f);
+            if (choir != null)
+                choir.ResumeSinging();
+            InChurch = true;
+            Teleport(inside.position, inside.rotation);
+            if (attention != null)
+                attention.ResetAll();
+            UpdateCounter();
+            yield return Fade(1f, 0f);
+            busy = false;
+            ShowSubtitle(churchLine, 4f);
+        }
+
         // ------------------------------------------------------------------ banishing
 
         /// <summary>Called by an anchor when it has been burned.</summary>
@@ -374,7 +448,10 @@ namespace HorrorGame.Painting
         void UpdateCounter()
         {
             EnsureOverlay();
-            counter.text = ExitOpen ? "Get back to the frame" : $"Burned {Burned} / {anchors.Length}";
+            if (realChurchDoor != null && !InChurch)
+                counter.text = "Find the church they are singing about";
+            else
+                counter.text = ExitOpen ? "Get back to the frame" : $"Burned {Burned} / {anchors.Length}";
         }
 
         public void ShowSubtitle(string line, float seconds)

@@ -10,10 +10,14 @@ itself where you look. When the choir stops singing, something stands up in the 
    `Scenes/HauntedPainting_Test.unity` and adds the paint filter to the URP renderer (switched off).
 2. Press Play. You are in a shut-up parlor. Walk to the portrait on the far wall; the smeared
    face starts to move as you get close. Look at it and press **E**.
-3. Inside: a dusk field, a farmhouse at the top of the path, three easels, and 28 heads buried in the grass.
+3. Inside: a dusk field in thick fog with 28 heads buried in the grass, and four identical black
+   churches looming in the fog. Only one is real; the song leads to it.
+   - **False church:** the door opens onto more field somewhere else in the fog, and the singing stops.
+   - **Real church:** the last stretch. A long black nave, a head buried in every pew, the song
+     deafening. The easels are in the aisle and the way out is behind the altar.
    - The world paints itself in wherever you look. Turn around and it dissolves into wet paint behind you.
    - **While the choir sings, you are safe, and they show you the way.** Every head turns toward
-     the nearest easel you have not burned (the frame, once they are all burned). The chord is in
+     the real church, then (inside) the nearest easel you have not burned, then the frame behind the altar. The chord is in
      tune when you face that way and goes sour when you face away.
    - **Every 30 to 50 seconds, and every time an easel burns, they all stop at once and snap their
      heads to one spot** in the wet paint behind you. Something is standing there.
@@ -41,6 +45,7 @@ itself where you look. When the choir stops singing, something stands up in the 
 | The thing that stands up when they stop (placeholder body, swappable) | `Runtime/Painting/PaintedEntity.cs` |
 | Easels / anything you burn | `Runtime/Painting/BanishAnchor.cs` |
 | The exit frame | `Runtime/Painting/RealmExit.cs` |
+| Church doors (false ones drop you in the fog, the real one takes you inside) | `Runtime/Painting/ChurchDoor.cs` |
 | Scene generator | `Editor/PaintingBuilder.cs` |
 | Tests (5) | `Tests/PlayMode/PaintingTests.cs` |
 
@@ -57,6 +62,7 @@ itself where you look. When the choir stops singing, something stands up in the 
 
 - **The choir is the entity** (Chad's pick). What stands up when they stop is a placeholder body
   (tall, long coat, face wiped off into a smear).
+- **How the entity is banished.** The easels are a placeholder objective inside the church.
 - **Paint tools** (throw white paint to erase, wet paint that slows it, paint your own door out)
   are not built yet. Next milestone, after this one is played.
 - **Where the painting hangs** in the real town (a house in ring 1 is the obvious place).

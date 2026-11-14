@@ -299,17 +299,17 @@ namespace HorrorGame.EditorTools
                         Quaternion.Euler(Rand(-12f, 12f), Rand(0f, 180f), Rand(-12f, 12f)));
             }
 
-            // The farmhouse at the top of the path. One window lit. Nobody has lived here for a long time.
-            var farm = GrayboxKit.Group("Farmhouse", scenery).transform;
-            kit.Box("House", farm, P(6f, 50f, 3f), new Vector3(9f, 6f, 7f), house);
-            kit.Box("RoofL", farm, P(3.6f, 50f, 7.3f), new Vector3(5.6f, 0.3f, 7.6f), roof, false, Quaternion.Euler(0f, 0f, 38f));
-            kit.Box("RoofR", farm, P(8.4f, 50f, 7.3f), new Vector3(5.6f, 0.3f, 7.6f), roof, false, Quaternion.Euler(0f, 0f, -38f));
-            kit.Box("Chimney", farm, P(9f, 51f, 8.5f), new Vector3(0.8f, 3f, 0.8f), roof);
-            kit.Box("WindowLit", farm, P(4f, 46.45f, 4.2f), new Vector3(1f, 1.3f, 0.05f), window, false);
-            kit.Box("WindowDark", farm, P(8.5f, 46.45f, 4.2f), new Vector3(1f, 1.3f, 0.05f), wood, false);
-            kit.Box("Door", farm, P(6f, 46.45f, 1.1f), new Vector3(1.1f, 2.2f, 0.05f), wood, false);
-            var houseLight = GrayboxKit.PointLight("WindowGlow", farm, P(4f, 45.5f, 4.2f), new Color(1f, 0.55f, 0.2f), 3f, 9f);
-            houseLight.transform.SetParent(farm, true);
+            // Four identical black churches in the fog. The path leads to a false one.
+            var churches = GrayboxKit.Group("Churches", scenery).transform;
+            var churchDoors = new List<ChurchDoor>
+            {
+                BuildChurch(churches, P(3f, 52f), 180f, realm),   // top of the path: false
+                BuildChurch(churches, P(-40f, 16f), 110f, realm), // false
+                BuildChurch(churches, P(30f, 42f), 220f, realm),  // false
+                BuildChurch(churches, P(40f, -8f), 270f, realm),  // the real one, off in the grass
+            };
+            var realDoor = churchDoors[3];
+            SerializedFields.SetBool(realDoor, "isReal", true);
 
             // Fences along the path, half fallen.
             var fences = GrayboxKit.Group("Fences", scenery).transform;
@@ -331,7 +331,7 @@ namespace HorrorGame.EditorTools
             foreach (var spot in new[] { new Vector2(-18f, 12f), new Vector2(20f, 30f), new Vector2(-30f, -20f), new Vector2(28f, -25f), new Vector2(-12f, 40f), new Vector2(35f, 10f) })
                 DeadTree(trees, P(spot.x, spot.y), wood);
 
-            // Dusk: a low, sick sun behind the farmhouse. Only on while inside.
+            // Dusk: a low, sick sun. Only on while inside.
             var lighting = GrayboxKit.Group("RealmLighting", root);
             var sun = new GameObject("DuskSun");
             sun.transform.SetParent(lighting.transform, false);
@@ -348,19 +348,27 @@ namespace HorrorGame.EditorTools
             var arrival = new GameObject("Arrival").transform;
             arrival.SetParent(root, false);
             arrival.SetPositionAndRotation(P(0f, -34f, 0.05f), Quaternion.identity);
-            var exit = BuildExitFrame(root, P(0f, -36f), kit.Get("M_Painting_Gilt", new Color(0.42f, 0.3f, 0.12f), 0.55f, 0.8f));
-            SerializedFields.Set(exit, "realm", realm);
+            BuildCanvasBack(root, P(0f, -36f));
 
-            // The easels: three paintings within the painting. Burn them.
-            var anchors = new List<Object>
+            // Where false church doors drop you: lost somewhere else in the fog.
+            var lost = GrayboxKit.Group("LostPoints", root).transform;
+            var lostPoints = new List<Object>();
+            foreach (var spot in new[] { new Vector3(-44f, 0f, -30f), new Vector3(-20f, 0f, 30f), new Vector3(20f, 0f, -40f), new Vector3(0f, 0f, 5f) })
             {
-                BuildEasel(root, P(-24f, -8f), Quaternion.Euler(0f, 140f, 0f), realm),
-                BuildEasel(root, P(23f, 4f), Quaternion.Euler(0f, 230f, 0f), realm),
-                BuildEasel(root, P(-7f, 28f), Quaternion.Euler(0f, 170f, 0f), realm),
-            };
+                var point = new GameObject("Lost").transform;
+                point.SetParent(lost, false);
+                point.SetPositionAndRotation(P(spot.x, spot.z, 0.05f), Quaternion.Euler(0f, Rand(0f, 360f), 0f));
+                lostPoints.Add(point);
+            }
 
-            // The thing waits under the paint by the farmhouse door until the singing stops.
-            var entity = BuildEntity(root, P(6f, 44f));
+            // The real church, bigger inside than out: the last stretch.
+            var church = BuildChurchInterior(root, P(0f, 200f), realm, soil, out var churchArrival, out var churchAnchors,
+                out var exit, out var churchSingers, out var churchNavMesh);
+            SerializedFields.Set(realDoor, "inside", churchArrival);
+            var anchors = churchAnchors;
+
+            // The thing waits under the paint until the singing stops.
+            var entity = BuildEntity(root, P(6f, 40f));
 
             // The choir: heads buried to the neck, scattered through the grass and lining the path.
             var choirRoot = GrayboxKit.Group("Choir", root).transform;
@@ -369,6 +377,7 @@ namespace HorrorGame.EditorTools
             float[] chord = { 1f, 1.189f, 1.498f, 2f, 0.5f, 1.189f }; // a minor chord with a low drone
             for (int i = 0; i < spots.Count; i++)
                 singers.Add(BuildSinger(choirRoot, P(spots[i].x, spots[i].y), chord[i % chord.Length], soil));
+            singers.AddRange(churchSingers);
 
             // NavMesh for the entity, baked from colliders at runtime.
             var navMesh = new GameObject("RealmNavMesh");
@@ -401,6 +410,8 @@ namespace HorrorGame.EditorTools
             SerializedFields.Set(realm, "entity", entity);
             SerializedFields.Set(realm, "choir", choir);
             SerializedFields.Set(realm, "exitPoint", exit.transform);
+            SerializedFields.Set(realm, "realChurchDoor", realDoor.transform);
+            SerializedFields.SetArray(realm, "lostPoints", lostPoints);
             SerializedFields.Set(choir, "realm", realm);
             SerializedFields.Set(choir, "entity", entity);
             SerializedFields.SetArray(choir, "singers", singers.ConvertAll(x => (Object)x));
@@ -411,6 +422,152 @@ namespace HorrorGame.EditorTools
             SerializedFields.Set(realm, "realmLighting", lighting);
             SerializedFields.SetArray(realm, "outsideOnly", outsideOnly.ConvertAll(go => (Object)go));
             return realm;
+        }
+
+        /// <summary>
+        /// One black church, all four identical: a nave, a pitched roof, a square tower with a spire,
+        /// red slits for windows, and a double door facing <paramref name="yaw"/>.
+        /// </summary>
+        static ChurchDoor BuildChurch(Transform parent, Vector3 position, float yaw, PaintedRealm realm)
+        {
+            var black = kit.Get("M_Painting_ChurchBlack", new Color(0.02f, 0.018f, 0.02f), 0.15f);
+            var glow = kit.Get("M_Painting_ChurchGlow", new Color(0.6f, 0.05f, 0.03f), 0.3f, 0f, new Color(1f, 0.08f, 0.03f) * 2f);
+            var doorMat = kit.Get("M_Painting_ChurchDoor", new Color(0.12f, 0.02f, 0.02f), 0.3f);
+            var root = GrayboxKit.Group("BlackChurch", parent).transform;
+            var rot = Quaternion.Euler(0f, yaw, 0f);
+            root.SetPositionAndRotation(position, rot);
+            Vector3 L(float x, float y, float z) => root.TransformPoint(new Vector3(x, y, z));
+            // Local +Z is the front (the door side).
+            kit.Box("Nave", root, L(0f, 3.5f, -7f), new Vector3(8f, 7f, 14f), black, true, rot);
+            kit.Box("RoofL", root, L(-2.3f, 8.4f, -7f), new Vector3(5.6f, 0.3f, 14.4f), black, false, rot * Quaternion.Euler(0f, 0f, 45f));
+            kit.Box("RoofR", root, L(2.3f, 8.4f, -7f), new Vector3(5.6f, 0.3f, 14.4f), black, false, rot * Quaternion.Euler(0f, 0f, -45f));
+            kit.Box("Tower", root, L(0f, 6.5f, 1.2f), new Vector3(3.4f, 13f, 3.4f), black, true, rot);
+            var spire = new GameObject("Spire");
+            spire.transform.SetParent(root, false);
+            spire.transform.position = L(0f, 13f, 1.2f);
+            spire.transform.rotation = rot;
+            spire.transform.localScale = new Vector3(3.6f, 9f, 3.6f);
+            spire.AddComponent<MeshFilter>().sharedMesh = GrayboxKit.ConeMesh();
+            spire.AddComponent<MeshRenderer>().sharedMaterial = black;
+            for (int i = 0; i < 4; i++)
+                for (int side = -1; side <= 1; side += 2)
+                    kit.Box("WindowSlit", root, L(side * 4.02f, 3.8f, -2.5f - i * 3f), new Vector3(0.05f, 2.6f, 0.35f), glow, false, rot);
+            kit.Box("TowerSlit", root, L(0f, 9f, 2.92f), new Vector3(0.35f, 1.8f, 0.05f), glow, false, rot);
+            kit.Box("DoorL", root, L(-0.55f, 1.4f, 2.93f), new Vector3(1.05f, 2.8f, 0.08f), doorMat, false, rot);
+            var door = kit.Box("DoorR", root, L(0.55f, 1.4f, 2.93f), new Vector3(1.05f, 2.8f, 0.08f), doorMat, true, rot);
+            // One collider over both leaves so the prompt works anywhere on the door.
+            Object.DestroyImmediate(door.GetComponent<Collider>());
+            var hit = new GameObject("Door");
+            hit.transform.SetParent(root, false);
+            hit.transform.SetPositionAndRotation(L(0f, 1.4f, 2.97f), rot);
+            hit.AddComponent<BoxCollider>().size = new Vector3(2.1f, 2.8f, 0.1f);
+            var glowLight = GrayboxKit.PointLight("DoorGlow", root, L(0f, 3.4f, 3.6f), new Color(1f, 0.1f, 0.05f), 1.5f, 6f);
+            glowLight.transform.SetParent(root, true);
+            var churchDoor = hit.AddComponent<ChurchDoor>();
+            SerializedFields.Set(churchDoor, "realm", realm);
+            return churchDoor;
+        }
+
+        /// <summary>
+        /// Inside the real church: a long black nave, the choir buried in the pews, the easels in the
+        /// aisle, and behind the altar the back of the frame you came in through: the way out.
+        /// Bigger inside than it is outside. Built far from the field; the real door teleports here.
+        /// </summary>
+        static Transform BuildChurchInterior(Transform parent, Vector3 origin, PaintedRealm realm, Material soil,
+            out Transform arrival, out List<Object> anchors, out RealmExit exit, out List<ChoirSinger> singers,
+            out GameObject navMesh)
+        {
+            var black = kit.Get("M_Painting_ChurchBlack", new Color(0.02f, 0.018f, 0.02f), 0.15f);
+            var stone = kit.Get("M_Painting_ChurchStone", new Color(0.16f, 0.13f, 0.12f), 0.2f);
+            var pewWood = kit.Get("M_Painting_Pew", new Color(0.12f, 0.06f, 0.04f), 0.35f);
+            var glow = kit.Get("M_Painting_ChurchGlow", new Color(0.6f, 0.05f, 0.03f), 0.3f, 0f, new Color(1f, 0.08f, 0.03f) * 2f);
+            var cloth = kit.Get("M_Painting_AltarCloth", new Color(0.5f, 0.45f, 0.38f), 0.05f);
+            var root = GrayboxKit.Group("ChurchInterior", parent).transform;
+            root.position = origin;
+            Vector3 P(float x, float z, float y = 0f) => origin + new Vector3(x, y, z);
+
+            const float halfWidth = 6.5f, length = 46f, height = 11f;
+            kit.Box("Floor", root, P(0f, length / 2f, -0.1f), new Vector3(halfWidth * 2f + 1f, 0.2f, length + 1f), stone);
+            kit.Box("Ceiling", root, P(0f, length / 2f, height), new Vector3(halfWidth * 2f + 1f, 0.3f, length + 1f), black);
+            kit.Box("WallW", root, P(-halfWidth - 0.25f, length / 2f, height / 2f), new Vector3(0.5f, height, length + 1f), black);
+            kit.Box("WallE", root, P(halfWidth + 0.25f, length / 2f, height / 2f), new Vector3(0.5f, height, length + 1f), black);
+            kit.Box("WallS", root, P(0f, -0.25f, height / 2f), new Vector3(halfWidth * 2f + 1f, height, 0.5f), black);
+            kit.Box("WallN", root, P(0f, length + 0.25f, height / 2f), new Vector3(halfWidth * 2f + 1f, height, 0.5f), black);
+            // Tall red windows down both sides, columns between them.
+            for (int i = 0; i < 6; i++)
+            {
+                float z = 5f + i * 7f;
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    kit.Box("Window", root, P(side * (halfWidth - 0.02f), z, 5.5f), new Vector3(0.05f, 6f, 1.2f), glow, false);
+                    kit.Box("Column", root, P(side * (halfWidth - 0.6f), z + 3.5f, height / 2f), new Vector3(0.8f, height, 0.8f), black);
+                }
+                var red = GrayboxKit.PointLight("WindowLight", root, P(0f, z, 6f), new Color(1f, 0.12f, 0.06f), 2.2f, 11f);
+                red.transform.SetParent(root, true);
+            }
+
+            // The pews: rows down both sides of the aisle, filled with earth, a head buried in every one.
+            singers = new List<ChoirSinger>();
+            float[] chord = { 1f, 1.498f, 1.189f, 2f, 0.75f };
+            int n = 0;
+            for (int row = 0; row < 12; row++)
+            {
+                float z = 6f + row * 2.6f;
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    float x = side * 3.4f;
+                    kit.Box("Pew", root, P(x, z, 0.45f), new Vector3(3.6f, 0.9f, 1.1f), pewWood);
+                    kit.Box("PewBack", root, P(x, z - 0.6f, 0.9f), new Vector3(3.6f, 1.8f, 0.12f), pewWood);
+                    kit.Box("PewEarth", root, P(x, z, 0.91f), new Vector3(3.4f, 0.04f, 0.9f), soil, false);
+                    var singer = BuildSinger(root, P(x + Rand(-1f, 1f), z, 0.6f), chord[n++ % chord.Length], soil);
+                    Object.DestroyImmediate(singer.transform.Find("Mound").gameObject);
+                    SerializedFields.SetFloat(singer, "volume", 0.9f);
+                    singers.Add(singer);
+                }
+            }
+
+            // The altar, candles, and behind it the back of the frame: the way out.
+            kit.Box("AltarStep", root, P(0f, length - 5f, 0.2f), new Vector3(8f, 0.4f, 4f), stone);
+            kit.Box("Altar", root, P(0f, length - 5f, 0.9f), new Vector3(3f, 1.0f, 1.2f), black);
+            kit.Box("AltarCloth", root, P(0f, length - 5f, 1.42f), new Vector3(3.2f, 0.04f, 1.4f), cloth, false);
+            for (int i = -1; i <= 1; i++)
+            {
+                var candle = GrayboxKit.PointLight("Candle", root, P(i * 1.1f, length - 5f, 1.8f), new Color(1f, 0.55f, 0.2f), 1.6f, 7f);
+                candle.transform.SetParent(root, true);
+                kit.Box("CandleStick", root, P(i * 1.1f, length - 5f, 1.6f), new Vector3(0.08f, 0.35f, 0.08f), cloth, false);
+            }
+            exit = BuildExitFrame(root, P(0f, length - 1.5f), kit.Get("M_Painting_Gilt", new Color(0.42f, 0.3f, 0.12f), 0.55f, 0.8f));
+            exit.transform.parent.rotation = Quaternion.Euler(0f, 180f, 0f);
+            SerializedFields.Set(exit, "realm", realm);
+
+            // Placeholder objective until the banishing is decided: three easels in the aisle.
+            anchors = new List<Object>
+            {
+                BuildEasel(root, P(-0.4f, 14f), Quaternion.Euler(0f, 15f, 0f), realm),
+                BuildEasel(root, P(0.4f, 27f), Quaternion.Euler(0f, -15f, 0f), realm),
+                BuildEasel(root, P(0f, length - 8.5f), Quaternion.identity, realm),
+            };
+
+            arrival = new GameObject("ChurchArrival").transform;
+            arrival.SetParent(root, false);
+            arrival.SetPositionAndRotation(P(0f, 1.5f, 0.05f), Quaternion.identity);
+
+            navMesh = new GameObject("ChurchNavMesh");
+            navMesh.transform.SetParent(root, false);
+            navMesh.transform.position = P(0f, length / 2f, 4f);
+            navMesh.AddComponent<RuntimeNavMesh>().Size = new Vector3(halfWidth * 2f + 2f, 12f, length + 2f);
+            return root;
+        }
+
+        /// <summary>Where you arrive in the field: the raw back of the canvas you came through. Not a way out.</summary>
+        static void BuildCanvasBack(Transform parent, Vector3 position)
+        {
+            var root = GrayboxKit.Group("CanvasBack", parent).transform;
+            var back = kit.Get("M_Painting_CanvasBack", new Color(0.5f, 0.44f, 0.33f), 0.05f);
+            var gilt = kit.Get("M_Painting_Gilt", new Color(0.42f, 0.3f, 0.12f), 0.55f, 0.8f);
+            kit.Box("Canvas", root, position + new Vector3(0f, 1.7f, 0f), new Vector3(2.2f, 3f, 0.05f), back);
+            kit.Box("Stretcher_H", root, position + new Vector3(0f, 1.7f, 0.06f), new Vector3(2.2f, 0.08f, 0.06f), gilt, false);
+            kit.Box("Stretcher_V", root, position + new Vector3(0f, 1.7f, 0.06f), new Vector3(0.08f, 3f, 0.06f), gilt, false);
         }
 
         /// <summary>A head buried to the neck: a mound of earth, the head, two dark eyes and a mouth that sings.</summary>
@@ -552,6 +709,7 @@ namespace HorrorGame.EditorTools
             var agent = root.AddComponent<NavMeshAgent>();
             agent.radius = 0.4f;
             agent.height = 2.6f;
+            agent.enabled = false; // switched on when the player enters, after the NavMesh is baked
             return root.AddComponent<PaintedEntity>();
 
             void Body(GameObject part)
