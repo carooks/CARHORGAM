@@ -62,6 +62,14 @@ the facility lights off and on. Rebuilt scene and player prefab committed.
   or too bright on your monitor.
 - The town is a compressed block-out, not to scale.
 
+### Side milestone: match factory at night (expanded; not yet built in Unity)
+
+Separate generated scene of the match factory at night: two brick wings, a courtyard, a 120 m
+machine hall, a warehouse, the Foreman's office, the dip room and the stairwell. It's dressed
+with Synty props when the packs are imported locally (they're git-ignored) and has a reusable
+pixel filter. See [MatchFactoryInterior.md](MatchFactoryInterior.md). The first, smaller slice
+compiled and built in Unity 6000.0.58f2. The expansion still needs a Unity build.
+
 ### Next milestone
 
 Phase 2, milestone 2: collectible objects with configurable values (scrap items built on
