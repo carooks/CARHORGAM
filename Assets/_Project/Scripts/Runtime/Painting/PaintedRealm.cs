@@ -161,6 +161,35 @@ namespace HorrorGame.Painting
             Awake();
         }
 
+        // ------------------------------------------------------------------ test shortcuts
+
+        /// <summary>
+        /// Command-line shortcuts for test runs of the exe (screenshots, quick checks):
+        ///   -enterPainting   start inside the painting
+        ///   -freeVoices      also free every painted-over voice at once (the real church opens)
+        /// </summary>
+        void Start()
+        {
+            var args = Environment.GetCommandLineArgs();
+            if (Array.IndexOf(args, "-enterPainting") < 0)
+                return;
+            var motor = FindFirstObjectByType<PlayerMotor>();
+            if (motor == null)
+                return;
+            Enter(motor.gameObject, FindFirstObjectByType<HauntedPainting>());
+            if (Array.IndexOf(args, "-freeVoices") >= 0)
+                StartCoroutine(FreeAllWhenInside());
+        }
+
+        IEnumerator FreeAllWhenInside()
+        {
+            while (State != RealmState.Inside)
+                yield return null;
+            foreach (var voice in voices)
+                if (voice != null)
+                    voice.Free();
+        }
+
         // ------------------------------------------------------------------ entering and leaving
 
         public bool CanEnter => State == RealmState.Outside && !busy;

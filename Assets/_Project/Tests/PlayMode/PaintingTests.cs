@@ -132,7 +132,7 @@ namespace HorrorGame.Tests
             realm.Configure(arrival, entity, voices, attention, null, null, churchDoor, altar);
 
             realm.Enter(player, null);
-            yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Inside, 5f, "take the player inside");
+            yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Inside, 15f, "take the player inside");
             Assert.That(Vector3.Distance(player.transform.position, arrival.position), Is.LessThan(0.1f));
             // Freeze the paint fully finished everywhere, so the entity stays pinned and cannot interfere.
             attention.enabled = false;
@@ -154,13 +154,14 @@ namespace HorrorGame.Tests
             Assert.That(Vector3.Distance(realm.CurrentGoal.Value, churchDoor.position), Is.LessThan(0.01f),
                 "With the chord complete, the song should lead to the real church.");
             realm.EnterChurch(churchInside);
-            yield return WaitFor(() => realm.InChurch && !realm.Busy, 5f, "go into the church");
+            // Fades run on real time while the test runs game time 3x faster, so allow plenty.
+            yield return WaitFor(() => realm.InChurch && !realm.Busy, 15f, "go into the church");
             Assert.That(Vector3.Distance(realm.CurrentGoal.Value, altar.position), Is.LessThan(0.01f));
             yield return WaitSeconds(1f);
             Assert.AreEqual(PaintedRealm.RealmState.Inside, realm.State, "Nothing happens until you reach the altar.");
 
             player.transform.position = new Vector3(0f, 0f, 21f);
-            yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Banished, 15f, "destroy it with the full chord and let you go");
+            yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Banished, 30f, "destroy it with the full chord and let you go");
             Assert.IsTrue(entity.IsBanished);
             Assert.IsTrue(health.IsAlive);
             Assert.That(Vector3.Distance(player.transform.position, outsidePosition), Is.LessThan(0.1f),
@@ -200,7 +201,7 @@ namespace HorrorGame.Tests
             attention.ResetAll(1f);
 
             realm.Enter(player, null);
-            yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Inside, 5f, "take the player inside");
+            yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Inside, 15f, "take the player inside");
             Assert.AreEqual(Choir.ChoirState.Singing, choir.State);
             Assert.IsTrue(singer.Singing);
             Assert.IsFalse(entity.Hunting, "While they sing, nothing is out.");
