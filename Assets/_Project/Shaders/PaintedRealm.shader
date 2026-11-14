@@ -108,8 +108,9 @@ Shader "HorrorGame/PaintedRealm"
                 float angle = ValueNoise(worldCoord * 0.08) * 6.2832 + ValueNoise(worldCoord * 0.3) * 1.2;
                 float2 along = float2(cos(angle), sin(angle));
                 float2 across = float2(-along.y, along.x);
-                float stretch = lerp(1.6, 3.2, wet);
-                float stepPx = lerp(0.9, 2.2, saturate(wet + dread * 0.5)) * pxScale;
+                float stretch = lerp(2.0, 3.4, wet);
+                // Even finished paint is thick, visible strokes; wet paint is smeared much further.
+                float stepPx = lerp(1.7, 2.9, saturate(wet + dread * 0.5)) * pxScale;
                 float2 stepAlong = along * stepPx * stretch * texel;
                 float2 stepAcross = across * (stepPx / stretch) * texel;
 
@@ -142,7 +143,7 @@ Shader "HorrorGame/PaintedRealm"
                 // Impasto: ridges across each stroke catch the light.
                 float2 px = uv * screen / pxScale;
                 float ridge = sin(dot(px, across) * 0.8 + ValueNoise(px * 0.05) * 9.0);
-                paint *= 1.0 + ridge * lerp(0.035, 0.09, wet);
+                paint *= 1.0 + ridge * lerp(0.06, 0.1, wet);
 
                 // Unfinished paint: a raw umber underpainting with bare canvas showing through.
                 float3 umber = float3(0.32, 0.2, 0.11) * (0.25 + Luma(paint) * 1.6);

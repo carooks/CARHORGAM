@@ -132,7 +132,8 @@ namespace HorrorGame.Tests
             realm.Configure(arrival, entity, voices, attention, null, null, churchDoor, altar);
 
             realm.Enter(player, null);
-            yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Inside, 15f, "take the player inside");
+            // Wait for the fade-in to finish too: nothing can be used while the realm is busy.
+            yield return WaitFor(() => realm.State == PaintedRealm.RealmState.Inside && !realm.Busy, 15f, "take the player inside");
             Assert.That(Vector3.Distance(player.transform.position, arrival.position), Is.LessThan(0.1f));
             // Freeze the paint fully finished everywhere, so the entity stays pinned and cannot interfere.
             attention.enabled = false;

@@ -44,7 +44,8 @@ namespace HorrorGame.Painting
         [Tooltip("Global volume with the painting's colour grade. Enabled only while inside.")]
         [SerializeField] GameObject realmVolume;
         [SerializeField] Color fogColor = new Color(0.32f, 0.24f, 0.15f);
-        [SerializeField] float fogDensity = 0.04f;
+        [Tooltip("Thick enough to hide the churches until you are within about 50 m, thin enough to glimpse them.")]
+        [SerializeField] float fogDensity = 0.026f;
         [SerializeField] Color ambientLight = new Color(0.32f, 0.26f, 0.2f);
         [Tooltip("Lights that belong to the inside of the painting, switched on only while inside.")]
         [SerializeField] GameObject realmLighting;
@@ -224,7 +225,8 @@ namespace HorrorGame.Painting
                 entity.Emerge(false, false);
             UpdateCounter();
             yield return Fade(1f, 0f);
-            ShowSubtitle(arrivalLine, 4.5f);
+            if (!ChordComplete)
+                ShowSubtitle(arrivalLine, 4.5f);
             busy = false;
             yield return new WaitForSeconds(6f);
             if (State == RealmState.Inside && Freed == 0)
