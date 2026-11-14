@@ -55,14 +55,86 @@ namespace HorrorGame.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
         }
 
+        // ------------------------------------------------------------------ match factory interior
+
+        /// <summary>Walkable box for the factory scene: yard, hall, dip room, stairwell and the raised office (see Docs/MatchFactoryInterior.md).</summary>
+        static readonly Bounds FactoryBounds = new Bounds(new Vector3(29.5f, 4f, 4f), new Vector3(70f, 12f, 72f));
+        /// <summary>Where the player starts in the factory scene; the Foreman spawns at the ground waypoint farthest from it.</summary>
+        static readonly Vector3 FactoryPlayerSpawn = new Vector3(7f, 0f, -22f);
+
+        [MenuItem("Horror Game/Add or Replace Foreman in Match Factory", priority = 22)]
+        static void AddToFactoryMenu()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+            AddToFactorySceneBatch();
+            EditorSceneManager.OpenScene(FactoryInteriorBuilder.ScenePath);
+            Selection.activeGameObject = GameObject.Find(MonsterName);
+        }
+
+        /// <summary>Batch entry point: opens the match factory scene, adds the Foreman on its AI_Waypoints route, and saves it.</summary>
+        public static void AddToFactorySceneBatch()
+        {
+            var scene = EditorSceneManager.OpenScene(FactoryInteriorBuilder.ScenePath);
+            foreach (var root in scene.GetRootGameObjects())
+                if (root.name == MonsterName || root.name == NavMeshName)
+                    Object.DestroyImmediate(root);
+            PlayerPrefabBuilder.EnsurePrefab();
+            BuildInFactory(new GrayboxKit());
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[Horror Game] Foreman added to " + FactoryInteriorBuilder.ScenePath);
+        }
+
+        /// <summary>Adds the NavMesh region and the Foreman to the open factory scene, patrolling its AI_Waypoints markers.</summary>
+        public static GameObject BuildInFactory(GrayboxKit kit)
+        {
+            var waypointRoot = GameObject.Find("AI_Waypoints");
+            var points = new List<Object>();
+            if (waypointRoot != null)
+                foreach (Transform child in waypointRoot.transform)
+                    points.Add(child);
+            if (points.Count == 0)
+                Debug.LogWarning("[Horror Game] No AI_Waypoints in the factory scene; the Foreman will stand still.");
+
+            BuildNavMesh(FactoryBounds.center, FactoryBounds.size);
+
+            // Spawn deep inside, at the ground-level waypoint farthest from the player's start.
+            Vector3 spawn = FactoryBounds.center;
+            float farthest = -1f;
+            foreach (Transform point in points)
+            {
+                if (point.position.y > 0.5f)
+                    continue;
+                float d = Vector3.Distance(point.position, FactoryPlayerSpawn);
+                if (d > farthest)
+                {
+                    farthest = d;
+                    spawn = point.position;
+                }
+            }
+
+            var monster = BuildBody(kit, spawn, out var eyes);
+            SerializedFields.SetArray(monster.GetComponent<MonsterBrain>(), "patrolPoints", points);
+            SerializedFields.SetArray(monster.GetComponent<MonsterPresentation>(), "eyes", eyes);
+            return monster;
+        }
+
+        static void BuildNavMesh(Vector3 center, Vector3 size)
+        {
+            var navMeshObject = new GameObject(NavMeshName);
+            navMeshObject.transform.position = center;
+            navMeshObject.AddComponent<RuntimeNavMesh>().Size = size;
+        }
+
+        // ------------------------------------------------------------------ Phase 1 facility
+
         /// <summary>Builds the NavMesh region, patrol route and Foreman for a facility whose south-west corner is at <paramref name="facilityOrigin"/>.</summary>
         public static GameObject Build(GrayboxKit kit, Vector3 facilityOrigin)
         {
-            var navMeshObject = new GameObject(NavMeshName);
-            navMeshObject.transform.position = facilityOrigin +
-                                               new Vector3(FacilityBuilder.Width * 0.5f, 4f, FacilityBuilder.Depth * 0.5f);
-            var navMesh = navMeshObject.AddComponent<RuntimeNavMesh>();
-            navMesh.Size = new Vector3(FacilityBuilder.Width + OutdoorApron * 2f, 12f, FacilityBuilder.Depth + OutdoorApron * 2f);
+            BuildNavMesh(facilityOrigin + new Vector3(FacilityBuilder.Width * 0.5f, 4f, FacilityBuilder.Depth * 0.5f),
+                new Vector3(FacilityBuilder.Width + OutdoorApron * 2f, 12f, FacilityBuilder.Depth + OutdoorApron * 2f));
 
             var route = GrayboxKit.Group(PatrolName, null).transform;
             var points = new List<Object>();

@@ -56,9 +56,9 @@ the facility lights off and on. Rebuilt scene and player prefab committed.
    The prompt now reads "[E] Restore the power". Press E again to turn them back on.
 5. Step back, or look away: the prompt disappears. Press Esc: the prompt disappears too.
 
-### Phase 3, milestone 1 — The Foreman (first monster): code complete, NOT yet verified in Unity
+### Phase 3, milestone 1 — The Foreman (first monster): tests pass, not yet hand-played
 
-Written in a cloud session without a Unity Editor. Nothing below has been compiled or run yet.
+Verified 2026-11-14 on Windows in batch mode: compiles, 11/11 play-mode tests pass, and he was added to the Phase 1 scene. Not hand-played yet.
 
 - `MonsterBrain` (`Scripts/Runtime/AI`): a four-state machine. **Patrol** walks a route of points.
   **Investigate** walks to a noise or half-seen target and searches for 5 s. **Chase** runs
@@ -107,8 +107,8 @@ Written in a cloud session without a Unity Editor. Nothing below has been compil
   60% of a lamp's range, so if lamps get brighter or wider in the blockout work, the Foreman will see
   you from farther away in lit areas.
 - Phase 2.2 (scrap, PR #2) is not merged yet, so being caught only costs you a restart.
-- The Foreman only exists in the Phase 1 facility. The new match factory interior scene (PR #4) has
-  waypoints ready for him, but he isn't in it yet.
+- The Foreman is also in the match factory interior scene (PR #4), patrolling its 18 AI_Waypoints.
+  The factory is much bigger than the Phase 1 facility, so his sight and hearing ranges may need retuning there.
 
 ### Side milestone: match factory interior (builds; not hand-tested)
 

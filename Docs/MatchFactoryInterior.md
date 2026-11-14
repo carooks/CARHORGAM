@@ -14,6 +14,8 @@ Generator: `Assets/_Project/Scripts/Editor/FactoryInteriorBuilder.cs`.
    flashlight (F).
 
 Batch mode (Unity closed): `-executeMethod HorrorGame.EditorTools.FactoryInteriorBuilder.BuildBatch`.
+To add or replace only the Foreman: menu **Horror Game > Add or Replace Foreman in Match Factory**, or
+`-executeMethod HorrorGame.EditorTools.MonsterBuilder.AddToFactorySceneBatch`.
 
 ## What's in it
 
@@ -27,8 +29,8 @@ Batch mode (Unity closed): `-executeMethod HorrorGame.EditorTools.FactoryInterio
 | Stairwell | X 10..16, Z 32..38 | Stairs end in rubble; chained door east |
 | Foreman's office | X 52..60, Z 12..20, 3.5 m up | Stair along the north wall; desk lamp is on with no power |
 
-One machine (row B, middle) hums even with the power off. `AI_Waypoints` holds 18 empty markers
-along the routes for a future patrol; nothing reads them yet.
+One machine (row B, middle) hums even with the power off. `AI_Waypoints` holds 18 markers
+along the routes. The Foreman patrols them (`MonsterBuilder.BuildInFactory`, called from the builder).
 
 ## Look
 
@@ -41,5 +43,5 @@ along the routes for a future patrol; nothing reads them yet.
 ## Known gaps
 
 - Verified 2026-11-14 on Windows (batch build, test renders, player build launches). Not yet play-tested by hand; the breaker starting OFF is unverified in Play mode.
-- No doors open, nothing to pick up, no monster here yet.
+- No doors open, nothing to pick up. The Foreman is in (spawns near the office end of the hall), but his tuning is from the small Phase 1 facility.
 - Rebuilding the Phase 1 scene resets Build Settings to Phase 1 only; rebuild this scene to re-add it.
