@@ -14,6 +14,9 @@ namespace HorrorGame.EditorTools
         const float WarehouseX0 = 120f, WarehouseX1 = 150f, WarehouseZ0 = -6f, WarehouseZ1 = 30f, WarehouseHeight = 9f;
         const float DriveX0 = 36f, DriveX1 = 44f;
 
+        /// <summary>Rotten boards in the west wing's locker room: they drop you a storey (hurts, doesn't kill).</summary>
+        static readonly Rect RottenPatch = Rect.MinMaxRect(-1.5f, -30.5f, 1.5f, -28f);
+
         // ------------------------------------------------------------------ receiving room
 
         static void BuildReceiving(Transform parent)
@@ -303,29 +306,10 @@ namespace HorrorGame.EditorTools
             Box("Band", parent, new Vector3(x1, y, (z0 + z1) * 0.5f), new Vector3(t, 0.2f, z1 - z0 + t), stone, false);
         }
 
-        /// <summary>A floor slab between two storeys, optionally with a rectangular hole (for a stair).</summary>
-        static void Slab(Transform parent, string name, float y, Rect area, Rect? hole, Material top)
+        /// <summary>A floor slab between two storeys (joists underneath), with optional holes for stairs or traps.</summary>
+        static void Slab(Transform parent, string name, float y, Rect area, Material top, params Rect[] holes)
         {
-            var group = GrayboxKit.Group(name, parent).transform;
-            void Piece(float xMin, float xMax, float zMin, float zMax)
-            {
-                if (xMax - xMin < 0.01f || zMax - zMin < 0.01f)
-                    return;
-                Box("Slab", group, new Vector3((xMin + xMax) * 0.5f, y - 0.1f, (zMin + zMax) * 0.5f),
-                    new Vector3(xMax - xMin, 0.2f, zMax - zMin), top);
-                Box("Joists", group, new Vector3((xMin + xMax) * 0.5f, y - 0.3f, (zMin + zMax) * 0.5f),
-                    new Vector3(xMax - xMin, 0.2f, zMax - zMin), roofBoards, false);
-            }
-            if (!hole.HasValue)
-            {
-                Piece(area.xMin, area.xMax, area.yMin, area.yMax);
-                return;
-            }
-            Rect h = hole.Value;
-            Piece(area.xMin, area.xMax, area.yMin, h.yMin);       // south strip
-            Piece(area.xMin, area.xMax, h.yMax, area.yMax);       // north strip
-            Piece(area.xMin, h.xMin, h.yMin, h.yMax);             // west of hole
-            Piece(h.xMax, area.xMax, h.yMin, h.yMax);             // east of hole
+            FloorWithHoles(parent, name, y, 0.2f, area, holes, top, roofBoards);
         }
 
         /// <summary>A partition wall across a wing at <paramref name="x"/>, one storey high, door in the middle.</summary>
@@ -346,8 +330,8 @@ namespace HorrorGame.EditorTools
             // Floor 2 (walkable, timber) with a stair hole in the south-east corner; floor 3 sealed.
             var area = Rect.MinMaxRect(inner0, zIn0, inner1, zIn1);
             var hole = Rect.MinMaxRect(25.5f, zIn0, 34f, -37.9f);
-            Slab(parent, "Floor2", StoreyHeight, area, hole, plank);
-            Slab(parent, "Floor3", StoreyHeight * 2f, area, null, plank);
+            Slab(parent, "Floor2", StoreyHeight, area, plank, hole, RottenPatch);
+            Slab(parent, "Floor3", StoreyHeight * 2f, area, plank);
             Stairs("Stairs", parent, new Vector3(26f, 0f, -38.9f), Vector3.right, 8f, StoreyHeight, 1.6f, timber);
             Railing("StairRail_N", parent, new Vector3(25.5f, StoreyHeight, -37.9f), new Vector3(34f, StoreyHeight, -37.9f), iron);
             Railing("StairRail_W", parent, new Vector3(25.5f, StoreyHeight, -37.9f), new Vector3(25.5f, StoreyHeight, zIn0), iron);
@@ -412,6 +396,7 @@ namespace HorrorGame.EditorTools
             FactoryProps.Place(f2, new Vector3(16.2f, y2 + 0.8f, -36f), 0f, Synty.Phone, null, false);
             CrateStack(f2, new Vector3(30f, y2, -27f));
 
+            RottenFloor(f2, RottenPatch, y2);
             HangingLamp(f2, new Vector3(-2f, y2, -32f), StoreyHeight, LampState.Dead, "WestF2_Lockers", 1f, false);
             HangingLamp(f2, new Vector3(14f, y2, -32f), StoreyHeight, LampState.Working, "WestF2_Office", 1f, false);
             HangingLamp(f2, new Vector3(29f, y2, -31f), StoreyHeight, LampState.Dead, "WestF2_Stair", 1f, false);
@@ -425,8 +410,8 @@ namespace HorrorGame.EditorTools
             float inner0 = x0 + WallThickness * 0.5f, inner1 = x1 - WallThickness * 0.5f;
             float zIn0 = WingSouth + WallThickness * 0.5f, zIn1 = WingNorth - WallThickness * 0.5f;
             var area = Rect.MinMaxRect(inner0, zIn0, inner1, zIn1);
-            Slab(parent, "Floor2", StoreyHeight, area, null, kit.Concrete);
-            Slab(parent, "Floor3", StoreyHeight * 2f, area, null, kit.Concrete);
+            Slab(parent, "Floor2", StoreyHeight, area, kit.Concrete);
+            Slab(parent, "Floor3", StoreyHeight * 2f, area, kit.Concrete);
             Partition(parent, 70f, 0f, brickDark);
 
             // Canteen (X 44..70): tables and chairs, some knocked over, a dead vending machine.
@@ -473,7 +458,8 @@ namespace HorrorGame.EditorTools
 
         static void BuildCourtyard(Transform parent)
         {
-            Box("Ground", parent, new Vector3(70f, -0.07f, 0f), new Vector3(220f, 0.1f, 140f), kit.Ground);
+            // The ground has a hole where the hall's basement pit is, or you'd land on grass 2 cm down.
+            FloorWithHoles(parent, "Ground", -0.02f, 0.1f, Rect.MinMaxRect(-40f, -70f, 180f, 70f), new[] { PitRect }, kit.Ground);
             Box("Asphalt", parent, new Vector3(70f, -0.015f, -12f), new Vector3(160f, 0.02f, 24f), kit.Asphalt);
             Box("Drive", parent, new Vector3(40f, -0.015f, -36f), new Vector3(8f, 0.02f, 24f), kit.Asphalt);
 
