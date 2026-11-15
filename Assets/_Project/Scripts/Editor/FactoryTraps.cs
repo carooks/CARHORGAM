@@ -177,7 +177,7 @@ namespace HorrorGame.EditorTools
             var trap = patch.gameObject.AddComponent<CollapsingFloor>();
             SerializedFields.Set(trap, "surface", surface);
             SerializedFields.SetArray(trap, "pieces", pieces);
-            SerializedFields.SetFloat(trap, "breakDelay", 1.1f);
+            SerializedFields.SetFloat(trap, "breakDelay", 0.55f); // short: it has to catch someone walking across 3 m
         }
 
         static void SetVector(Object target, string field, Vector3 value)

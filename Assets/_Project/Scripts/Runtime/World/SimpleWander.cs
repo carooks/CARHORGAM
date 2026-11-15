@@ -25,7 +25,8 @@ namespace HorrorGame.World
         [Header("Arms (optional)")]
         [Tooltip("Upper-arm bones of a T-posed rig. They are swung down by droopAngle and swing as it walks.")]
         [SerializeField] Transform[] armBones = new Transform[0];
-        [SerializeField] float droopAngle = 65f;
+        [Tooltip("Degrees to swing the arms down: about 65 for a T-pose rig, 25 for an A-pose one.")]
+        [SerializeField] float droopAngle = 25f;
         [SerializeField] float armSwing = 10f;
 
         [Header("Noticing")]
