@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-11-14_
+_Last updated: 2026-11-18_
 
 ## Current phase: 2 — Core gameplay (Phase 3 monster started early, see below)
 
@@ -117,6 +117,48 @@ machine hall, a warehouse, the Foreman's office, the dip room and the stairwell.
 with Synty props when the packs are imported locally (they're git-ignored) and has a reusable
 pixel filter. See [MatchFactoryInterior.md](MatchFactoryInterior.md). The first, smaller slice
 compiled and built in Unity 6000.0.58f2. The expansion still needs a Unity build.
+
+### Side experiment: glass house test room (co-op idea; not yet built in Unity)
+
+A small generated scene (`Scenes/GlassHouse_Test.unity`) for the "glass house" co-op idea: players
+get split up by glass, can still see each other, and can't help directly. Built on the Foreman
+(this branch sits on top of his PR). Menu: **Horror Game > Build Glass House Test Room**.
+
+- 18 x 18 m room split into nine 6 m cells by 24 sliding glass panes, in 12 pairs that slide over
+  each other like patio doors. A section is closed, or one of its panes has slid aside to leave a
+  3 m gap. Never both, so a shift can't leave two panes stacked over the same gap.
+- `GlassHouse` reshuffles the layout every 45 s (4 s of red lights and a buzzer first, countdown at
+  the top of the screen). The lever on the wall behind your spawn shifts it right away (it's loud).
+  Panes stop against anyone standing in their path instead of crushing them.
+- Glass (`GlassPane`): thin box collider on the built-in Ignore Raycast layer, so it blocks bodies
+  but not monster sight. URP Lit transparent, very smooth, "preserve specular" so the flashlight
+  glints off it, with a generated etched pattern (border, glyph ring, sigil) that glows faintly.
+  No refraction.
+- Banging: look at any pane and press E. Thud, the pane shudders, and the Foreman hears it from 24 m.
+- The Foreman sees you through glass and chases, but his grab can't pass through it (new
+  `IStrikeBarrier` check in `MonsterBrain`): he slams the glass instead.
+- Sound through glass is muffled (`GlassAudioMuffler`: low-pass filter on 3D sources, 1100 Hz
+  through one pane, 450 Hz through two or more).
+- A harmless ghost drifts through gaps and through the four panes with green etching. Touching
+  you makes it wail (the Foreman hears that too) and vanish for 8 s.
+- Co-op: the whole layout is one small int array; later the host picks it and clients apply it
+  (`GlassHouse.ApplyLayout`). Muffling is per listener; the monster and ghost already handle every
+  `DetectableTarget`.
+- 6 play-mode tests in `Tests/PlayMode/GlassHouseTests.cs`.
+
+### How to verify the glass house
+
+1. Open the project; no red errors in the Console. Test Runner > PlayMode > Run All: the new
+   `GlassHouseTests` (6) pass, and the Foreman's 11 still pass.
+2. **Horror Game > Build Glass House Test Room**. Press Play.
+3. Flashlight on (F) and sweep it across a pane: a bright glint and faint etched symbols.
+4. Look at a pane within 2.5 m: "[E] Bang on the glass". Bang: thud, shudder; press F3 and the
+   Foreman's state goes to Investigate.
+5. Turn round, pull the lever: red lights and buzzer, then panes slide. Stand in a pane's path: it stops at you.
+6. Get the Foreman to chase you with glass between you: he presses up to it and slams it, but you live.
+7. Listen to his footsteps or the buzzing lamps through glass vs. through a gap: muffled vs. clear.
+8. Watch the ghost: it should only cross closed glass at the green-etched panes.
+9. Commit the new scene, materials (M_Glass*, M_Ghost*), textures (Textures/T_GlassEtch*) and build settings.
 
 ### Next milestone
 

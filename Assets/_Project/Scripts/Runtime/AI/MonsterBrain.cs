@@ -148,6 +148,8 @@ namespace HorrorGame.AI
         public event Action AttackStarted;
         /// <summary>Raised for each noise it actually heard.</summary>
         public event Action<NoiseEvent> Heard;
+        /// <summary>Raised when a grab would have landed but something solid (like glass) was in the way.</summary>
+        public event Action<DetectableTarget> StrikeBlocked;
 
         Vector3 EyePosition => transform.position + Vector3.up * eyeHeight;
 
@@ -331,6 +333,42 @@ namespace HorrorGame.AI
                 return true;
             return (hit.point - to).sqrMagnitude <= endTolerance * endTolerance;
         }
+
+        /// <summary>
+        /// Sight ignores see-through things (glass is on the Ignore Raycast layer), but a grab can't pass
+        /// through any solid collider. True if something solid stands between this monster's chest and
+        /// the target's; <paramref name="barrier"/> is set when that something is an <see cref="IStrikeBarrier"/>.
+        /// </summary>
+        bool IsReachBlocked(DetectableTarget target, out IStrikeBarrier barrier, out Vector3 point)
+        {
+            barrier = null;
+            point = default;
+            Vector3 from = transform.position + Vector3.up * (bodyHeight * 0.5f);
+            Vector3 to = target.ChestPosition;
+            Vector3 direction = to - from;
+            float length = direction.magnitude;
+            if (length < 0.01f)
+                return false;
+            int count = Physics.RaycastNonAlloc(from, direction / length, ReachHits, length, Physics.AllLayers,
+                QueryTriggerInteraction.Ignore);
+            float nearest = float.MaxValue;
+            bool blocked = false;
+            for (int i = 0; i < count; i++)
+            {
+                var hit = ReachHits[i];
+                if (hit.collider.transform.IsChildOf(transform) || hit.collider.transform.IsChildOf(target.transform))
+                    continue;
+                if (hit.distance >= nearest)
+                    continue;
+                nearest = hit.distance;
+                blocked = true;
+                point = hit.point;
+                barrier = hit.collider.GetComponentInParent<IStrikeBarrier>();
+            }
+            return blocked;
+        }
+
+        static readonly RaycastHit[] ReachHits = new RaycastHit[8];
 
         void OnNoise(NoiseEvent noise)
         {
@@ -543,9 +581,18 @@ namespace HorrorGame.AI
                 if (Target != null && Target.IsAlive && FlatDistance(Target.transform.position) <= attackReach &&
                     CanSee(Target, out _))
                 {
-                    if (Target.Health != null)
-                        Target.Health.TakeHit(attackDamage, gameObject);
-                    Struck?.Invoke(Target);
+                    if (IsReachBlocked(Target, out var barrier, out var barrierPoint))
+                    {
+                        // Seen through glass but out of reach: the grab hits the barrier instead.
+                        barrier?.OnStrikeBlocked(this, barrierPoint);
+                        StrikeBlocked?.Invoke(Target);
+                    }
+                    else
+                    {
+                        if (Target.Health != null)
+                            Target.Health.TakeHit(attackDamage, gameObject);
+                        Struck?.Invoke(Target);
+                    }
                 }
             }
 
