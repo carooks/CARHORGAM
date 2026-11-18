@@ -51,3 +51,7 @@ sysinfo.txt
 # Burst / addressables generated
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Bought asset packs: imported locally, never committed (public repo)
+/[Aa]ssets/Synty/
+/[Aa]ssets/Synty.meta
