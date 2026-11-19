@@ -621,6 +621,7 @@ namespace HorrorGame.EditorTools
                 Debug.LogError("[Horror Game] Glass mansion: NavMesh bake failed, can't check the rooms are reachable.");
                 return rooms.Count;
             }
+            Debug.Log($"[Horror Game] Reachability bake: {sources.Count} collider sources in {bounds}.");
             var instance = NavMesh.AddNavMeshData(data);
             int unreachable = 0;
             try
@@ -640,6 +641,8 @@ namespace HorrorGame.EditorTools
                     {
                         unreachable++;
                         Debug.LogError($"[Horror Game] Glass mansion: can't walk from the start to {room.name}.");
+                        if (unreachable == 1)
+                            LogWhyBlocked(start.position, room.position, path);
                     }
                 }
             }
@@ -649,6 +652,23 @@ namespace HorrorGame.EditorTools
                 Object.DestroyImmediate(data);
             }
             return unreachable;
+        }
+
+        /// <summary>Diagnostics for the first unreachable room: where the path gives up and what solid things are there.</summary>
+        static void LogWhyBlocked(Vector3 from, Vector3 to, NavMeshPath path)
+        {
+            var log = new System.Text.StringBuilder();
+            log.Append($"[Horror Game] Path check from {from} to {to}: status {path.status}, {path.corners.Length} corners");
+            if (path.corners.Length > 0)
+            {
+                Vector3 end = path.corners[path.corners.Length - 1];
+                log.Append($", gives up at {end}. Colliders within 1.5 m of there:");
+                foreach (var c in Physics.OverlapSphere(end + Vector3.up, 1.5f, Physics.AllLayers, QueryTriggerInteraction.Collide))
+                    log.Append($"\n  {c.name} (parent {(c.transform.parent != null ? c.transform.parent.name : "-")}, layer {c.gameObject.layer}, {c.GetType().Name}, bounds {c.bounds})");
+            }
+            var tri = NavMesh.CalculateTriangulation();
+            log.Append($"\n  NavMesh has {tri.vertices.Length} vertices, {tri.indices.Length / 3} triangles.");
+            Debug.Log(log.ToString());
         }
 
         // ------------------------------------------------------------------ helpers
