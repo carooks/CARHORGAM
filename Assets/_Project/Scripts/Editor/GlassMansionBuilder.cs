@@ -608,16 +608,6 @@ namespace HorrorGame.EditorTools
                 new List<NavMeshBuildMarkup>(), sources);
             // Same filter as the runtime bake: no players, monsters or carving obstacles (the glass).
             sources.RemoveAll(HorrorGame.AI.RuntimeNavMesh.IsMovingThing);
-            var shapes = new Dictionary<string, int>();
-            foreach (var source in sources)
-            {
-                string key = $"{source.shape}/{(source.component != null ? source.component.GetType().Name : "null")}/area {source.area}";
-                shapes[key] = shapes.TryGetValue(key, out int n) ? n + 1 : 1;
-            }
-            var summary = new System.Text.StringBuilder("[Horror Game] Reachability bake sources by shape/component/area:");
-            foreach (var pair in shapes)
-                summary.Append($"\n  {pair.Key}: {pair.Value}");
-            Debug.Log(summary.ToString());
             var settings = NavMesh.GetSettingsByID(0);
             settings.agentRadius = 0.4f;
             settings.agentHeight = 2.2f;
@@ -629,7 +619,6 @@ namespace HorrorGame.EditorTools
                 Debug.LogError("[Horror Game] Glass mansion: NavMesh bake failed, can't check the rooms are reachable.");
                 return rooms.Count;
             }
-            Debug.Log($"[Horror Game] Reachability bake: {sources.Count} collider sources in {bounds}.");
             // Glass panes carve the NavMesh through their NavMeshObstacles, even in the editor. Switch them
             // off for the check, so it answers "can you get everywhere when the glass is open".
             var obstacles = new List<NavMeshObstacle>();
@@ -660,7 +649,7 @@ namespace HorrorGame.EditorTools
                         string lastCorner = path.corners.Length > 0 ? path.corners[path.corners.Length - 1].ToString() : "none";
                         Debug.LogError($"[Horror Game] Glass mansion: can't walk from the start to {room.name} " +
                                        $"(status {path.status}, {path.corners.Length} corners, closest point reached {lastCorner}).");
-                        if (room.name.Contains("_H"))
+                        if (unreachable == 1)
                             LogWhyBlocked(start.position, room.position, path);
                     }
                 }
@@ -686,23 +675,6 @@ namespace HorrorGame.EditorTools
                 log.Append($", gives up at {end}. Colliders within 1.5 m of there:");
                 foreach (var c in Physics.OverlapSphere(end + Vector3.up, 1.5f, Physics.AllLayers, QueryTriggerInteraction.Collide))
                     log.Append($"\n  {c.name} (parent {(c.transform.parent != null ? c.transform.parent.name : "-")}, layer {c.gameObject.layer}, {c.GetType().Name}, bounds {c.bounds})");
-            }
-            // Everything solid in the K/H doorway on the ground floor (x = 12, z 0..6).
-            log.Append("\n  Colliders in the ground-floor doorway at x = 12, z 0..6:");
-            foreach (var c in Physics.OverlapBox(new Vector3(12f, 1.1f, 3f), new Vector3(0.5f, 1f, 3f), Quaternion.identity, Physics.AllLayers, QueryTriggerInteraction.Collide))
-                log.Append($"\n    {c.name} (parent {(c.transform.parent != null ? c.transform.parent.name : "-")}, layer {c.gameObject.layer}, {c.GetType().Name}, bounds {c.bounds})");
-            if (NavMesh.SamplePosition(new Vector3(9f, 0f, 3f), out var west, 1f, NavMesh.AllAreas) &&
-                NavMesh.SamplePosition(new Vector3(15f, 0f, 3f), out var east, 1f, NavMesh.AllAreas))
-            {
-                var across = new NavMeshPath();
-                NavMesh.CalculatePath(west.position, east.position, NavMesh.AllAreas, across);
-                log.Append($"\n  Path straight across that doorway {west.position} -> {east.position}: {across.status}, {across.corners.Length} corners.");
-                bool hit = NavMesh.Raycast(west.position, east.position, out var edge, NavMesh.AllAreas);
-                log.Append($" NavMesh.Raycast blocked: {hit} at {edge.position}.");
-            }
-            else
-            {
-                log.Append("\n  No NavMesh within 1 m of (9, 0, 3) or (15, 0, 3).");
             }
             var tri = NavMesh.CalculateTriangulation();
             log.Append($"\n  NavMesh has {tri.vertices.Length} vertices, {tri.indices.Length / 3} triangles.");

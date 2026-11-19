@@ -90,9 +90,8 @@ namespace HorrorGame.AI
                 return false;
             if (component is Collider collider && collider.isTrigger)
                 return true;
-            // CollectSources also returns NavMeshObstacles (as unwalkable boxes), whatever their layer.
-            // Obstacles carve the NavMesh at runtime instead, so baking them in would block their spot
-            // for good, even after a sliding glass pane moves away.
+            // Safeguard: obstacles (like sliding glass) carve the NavMesh at runtime and must never be
+            // baked in, or their spot would stay blocked after they move away.
             if (component is NavMeshObstacle)
                 return true;
             return component.GetComponentInParent<CharacterController>() != null
