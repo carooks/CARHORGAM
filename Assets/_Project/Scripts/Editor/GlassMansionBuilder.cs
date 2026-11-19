@@ -640,8 +640,10 @@ namespace HorrorGame.EditorTools
                     if (!reached)
                     {
                         unreachable++;
-                        Debug.LogError($"[Horror Game] Glass mansion: can't walk from the start to {room.name}.");
-                        if (unreachable == 1)
+                        string end = path.corners.Length > 0 ? path.corners[path.corners.Length - 1].ToString() : "none";
+                        Debug.LogError($"[Horror Game] Glass mansion: can't walk from the start to {room.name} " +
+                                       $"(status {path.status}, {path.corners.Length} corners, closest point reached {end}).");
+                        if (room.name.Contains("_H"))
                             LogWhyBlocked(start.position, room.position, path);
                     }
                 }
@@ -665,6 +667,23 @@ namespace HorrorGame.EditorTools
                 log.Append($", gives up at {end}. Colliders within 1.5 m of there:");
                 foreach (var c in Physics.OverlapSphere(end + Vector3.up, 1.5f, Physics.AllLayers, QueryTriggerInteraction.Collide))
                     log.Append($"\n  {c.name} (parent {(c.transform.parent != null ? c.transform.parent.name : "-")}, layer {c.gameObject.layer}, {c.GetType().Name}, bounds {c.bounds})");
+            }
+            // Everything solid in the K/H doorway on the ground floor (x = 12, z 0..6).
+            log.Append("\n  Colliders in the ground-floor doorway at x = 12, z 0..6:");
+            foreach (var c in Physics.OverlapBox(new Vector3(12f, 1.1f, 3f), new Vector3(0.5f, 1f, 3f), Quaternion.identity, Physics.AllLayers, QueryTriggerInteraction.Collide))
+                log.Append($"\n    {c.name} (parent {(c.transform.parent != null ? c.transform.parent.name : "-")}, layer {c.gameObject.layer}, {c.GetType().Name}, bounds {c.bounds})");
+            if (NavMesh.SamplePosition(new Vector3(9f, 0f, 3f), out var west, 1f, NavMesh.AllAreas) &&
+                NavMesh.SamplePosition(new Vector3(15f, 0f, 3f), out var east, 1f, NavMesh.AllAreas))
+            {
+                var across = new NavMeshPath();
+                NavMesh.CalculatePath(west.position, east.position, NavMesh.AllAreas, across);
+                log.Append($"\n  Path straight across that doorway {west.position} -> {east.position}: {across.status}, {across.corners.Length} corners.");
+                bool hit = NavMesh.Raycast(west.position, east.position, out var edge, NavMesh.AllAreas);
+                log.Append($" NavMesh.Raycast blocked: {hit} at {edge.position}.");
+            }
+            else
+            {
+                log.Append("\n  No NavMesh within 1 m of (9, 0, 3) or (15, 0, 3).");
             }
             var tri = NavMesh.CalculateTriangulation();
             log.Append($"\n  NavMesh has {tri.vertices.Length} vertices, {tri.indices.Length / 3} triangles.");
