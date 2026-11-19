@@ -185,6 +185,9 @@ Monster ideas so far (models from Meshy in project files, not in the game yet):
   dog. She runs under the glass floor panels beneath the players and bangs on the glass from below
   as a jump scare. Each bang cracks the pane a bit more; after enough bangs it breaks and drops
   whoever is standing on it. A broken pane stays broken: a permanent hole down to her floor. Needs longer arms and a custom all-fours run.
+- **Plastic Face**: a harmless, curious ghost who cautiously follows the players around the
+  mansion. At some point something the players do or solve makes her warp into the crawler. The
+  trigger is picked at random each run, so replays stay unpredictable.
 - **The ink monster**: a bulky figure made of black tendrils with glowing eyes.
 - **The hooded ghost**: a clawed wraith, a fit for the knock-down or carry-away role.
 
