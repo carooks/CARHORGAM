@@ -1,4 +1,5 @@
 using System;
+using HorrorGame.AI;
 using HorrorGame.Audio;
 using HorrorGame.Interaction;
 using UnityEngine;
@@ -23,6 +24,8 @@ namespace HorrorGame.World
         [SerializeField] Transform lever;
         [SerializeField] float leverAngle = 35f;
         [Range(0f, 1f)] [SerializeField] float clickVolume = 0.8f;
+        [Tooltip("How far monsters hear the breaker being thrown, in metres.")]
+        [SerializeField] float noiseRadius = 25f;
 
         static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
 
@@ -55,6 +58,7 @@ namespace HorrorGame.World
         {
             Apply(!IsOn);
             clickSource.PlayOneShot(clickSource.clip, clickVolume);
+            Noise.Emit(transform.position, noiseRadius, gameObject);
             Switched?.Invoke(IsOn);
         }
 

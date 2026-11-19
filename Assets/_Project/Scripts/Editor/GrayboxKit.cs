@@ -74,7 +74,8 @@ namespace HorrorGame.EditorTools
             VanPaint = Get("M_VanPaint", new Color(0.55f, 0.55f, 0.52f), 0.5f, 0.2f);
         }
 
-        Material Get(string name, Color color, float smoothness, float metallic = 0f, Color? emission = null)
+        /// <summary>Loads or creates a placeholder material under Assets/_Project/Materials.</summary>
+        public Material Get(string name, Color color, float smoothness, float metallic = 0f, Color? emission = null)
         {
             if (materials.TryGetValue(name, out var cached))
                 return cached;

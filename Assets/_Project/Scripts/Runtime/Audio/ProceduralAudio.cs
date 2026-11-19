@@ -13,6 +13,14 @@ namespace HorrorGame.Audio
         ElectricalBuzz,
         /// <summary>Short mechanical click, e.g. a flashlight switch.</summary>
         Click,
+        /// <summary>Player footstep on concrete: a short scuff with a soft low thump.</summary>
+        Footstep,
+        /// <summary>A heavy, slow footfall for a large monster.</summary>
+        HeavyStep,
+        /// <summary>Slow, wet, rasping breathing loop for a monster (heard close up).</summary>
+        MonsterBreath,
+        /// <summary>Harsh rising shriek, played when a monster starts chasing.</summary>
+        Screech,
     }
 
     /// <summary>
@@ -36,6 +44,10 @@ namespace HorrorGame.Audio
                 case ProceduralSound.Drone: clip = CreateDrone(); break;
                 case ProceduralSound.MachineHum: clip = CreateMachineHum(); break;
                 case ProceduralSound.ElectricalBuzz: clip = CreateBuzz(); break;
+                case ProceduralSound.Footstep: clip = CreateFootstep(); break;
+                case ProceduralSound.HeavyStep: clip = CreateHeavyStep(); break;
+                case ProceduralSound.MonsterBreath: clip = CreateBreath(); break;
+                case ProceduralSound.Screech: clip = CreateScreech(); break;
                 default: clip = CreateClick(); break;
             }
             Cache[sound] = clip;
@@ -106,6 +118,88 @@ namespace HorrorGame.Audio
                 raw[i] = ((float)(rng.NextDouble() * 2.0 - 1.0) * 0.6f + Sine(2200f, t) * 0.4f) * envelope;
             }
             return Finish("Click", raw, length, 0.8f, false);
+        }
+
+        static AudioClip CreateFootstep()
+        {
+            int length = SampleRate * 18 / 100;
+            var rng = new System.Random(11);
+            float lowpass = 0f;
+            float[] raw = new float[length];
+            for (int i = 0; i < length; i++)
+            {
+                float t = (float)i / SampleRate;
+                float white = (float)(rng.NextDouble() * 2.0 - 1.0);
+                lowpass += (white - lowpass) * 0.25f;
+                float scuff = lowpass * Mathf.Exp(-t * 35f);
+                float thump = Sine(85f * (1f - t * 1.5f), t) * Mathf.Exp(-t * 30f);
+                raw[i] = scuff * 0.7f + thump * 0.6f;
+            }
+            return Finish("Footstep", raw, length, 0.8f, false);
+        }
+
+        static AudioClip CreateHeavyStep()
+        {
+            int length = SampleRate * 45 / 100;
+            var rng = new System.Random(21);
+            float lowpass = 0f;
+            float[] raw = new float[length];
+            for (int i = 0; i < length; i++)
+            {
+                float t = (float)i / SampleRate;
+                float white = (float)(rng.NextDouble() * 2.0 - 1.0);
+                lowpass += (white - lowpass) * 0.06f;
+                float thud = Sine(48f * (1f - t * 0.6f), t) * Mathf.Exp(-t * 9f);
+                float drag = lowpass * Mathf.Exp(-t * 6f) * Mathf.Clamp01(t * 20f);
+                raw[i] = thud + drag * 2.5f;
+            }
+            return Finish("HeavyStep", raw, length, 0.9f, false);
+        }
+
+        static AudioClip CreateBreath()
+        {
+            // Two 3-second breaths (inhale, pause, exhale) so the 6-second loop has whole cycles.
+            const int seconds = 6;
+            const float period = 3f;
+            var rng = new System.Random(31);
+            float band = 0f, low = 0f;
+            float[] raw = new float[seconds * SampleRate + SampleRate / 4];
+            for (int i = 0; i < raw.Length; i++)
+            {
+                float t = (float)i / SampleRate;
+                float phase = (t % period) / period;
+                float inhale = phase < 0.35f ? Mathf.Sin(phase / 0.35f * Mathf.PI) * 0.6f : 0f;
+                float exhale = phase > 0.45f ? Mathf.Sin((phase - 0.45f) / 0.55f * Mathf.PI) : 0f;
+                float white = (float)(rng.NextDouble() * 2.0 - 1.0);
+                low += (white - low) * 0.12f;
+                band += (low - band) * 0.3f;
+                float breath = (low - band) * 6f;
+                float rasp = Sine(70f, t) * (0.5f + 0.5f * Sine(23f, t)) * 0.25f;
+                raw[i] = (breath + rasp) * (inhale + exhale);
+            }
+            return Finish("MonsterBreath", raw, seconds * SampleRate, 0.6f, true);
+        }
+
+        static AudioClip CreateScreech()
+        {
+            int length = SampleRate * 13 / 10;
+            var rng = new System.Random(41);
+            float[] raw = new float[length];
+            float phaseA = 0f, phaseB = 0f;
+            for (int i = 0; i < length; i++)
+            {
+                float t = (float)i / SampleRate;
+                float pitch = Mathf.Lerp(380f, 760f, Mathf.Sqrt(t / 1.3f));
+                phaseA += pitch / SampleRate;
+                phaseB += pitch * 1.47f / SampleRate;
+                float sawA = (phaseA - Mathf.Floor(phaseA)) * 2f - 1f;
+                float sawB = (phaseB - Mathf.Floor(phaseB)) * 2f - 1f;
+                float noise = (float)(rng.NextDouble() * 2.0 - 1.0);
+                float envelope = Mathf.Clamp01(t * 12f) * Mathf.Clamp01((1.3f - t) * 3f);
+                float tremolo = 0.75f + 0.25f * Sine(13f, t);
+                raw[i] = (sawA * 0.5f + sawB * 0.3f + noise * 0.35f) * envelope * tremolo;
+            }
+            return Finish("Screech", raw, length, 0.7f, false);
         }
 
         static float Sine(float frequency, float time) => Mathf.Sin(2f * Mathf.PI * frequency * time);

@@ -8,5 +8,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/Phase1_Graybox.unity
     guid: a5c0bdbb9b4121947b4ae144ce1589dd
+  - enabled: 1
+    path: Assets/_Project/Scenes/MatchFactory_Interior.unity
+    guid: b3f9d4b7f258e524596803fcf98099fd
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

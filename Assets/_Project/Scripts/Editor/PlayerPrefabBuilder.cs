@@ -1,3 +1,4 @@
+using HorrorGame.AI;
 using HorrorGame.Interaction;
 using HorrorGame.Player;
 using UnityEditor;
@@ -11,7 +12,8 @@ namespace HorrorGame.EditorTools
     /// introduced by later milestones to an existing prefab (without touching anything else on it).
     ///
     /// Player                (CharacterController, PlayerInputReader, PlayerMotor, PlayerLook,
-    ///                        PlayerInteractor, InteractionPromptUI)
+    ///                        PlayerInteractor, InteractionPromptUI, PlayerHealth, PlayerFootsteps,
+    ///                        DetectableTarget, CaughtScreen, MonsterDebugHUD)
     ///   CameraRoot          (pitch pivot at eye height)
     ///     PlayerCamera      (Camera, AudioListener)
     ///       Flashlight      (Spot Light, Flashlight)
@@ -100,10 +102,15 @@ namespace HorrorGame.EditorTools
             }
         }
 
-        /// <summary>Phase 2 components. Returns true if anything was added.</summary>
+        /// <summary>Phase 2 and 3 components. Returns true if anything was added.</summary>
         static bool AddMissingComponents(GameObject root)
         {
             bool changed = false;
+            changed |= AddIfMissing<PlayerHealth>(root);
+            changed |= AddIfMissing<PlayerFootsteps>(root);
+            changed |= AddIfMissing<DetectableTarget>(root);
+            changed |= AddIfMissing<CaughtScreen>(root);
+            changed |= AddIfMissing<MonsterDebugHUD>(root);
             if (root.GetComponent<PlayerInteractor>() == null)
             {
                 var interactor = root.AddComponent<PlayerInteractor>();
@@ -118,6 +125,14 @@ namespace HorrorGame.EditorTools
                 changed = true;
             }
             return changed;
+        }
+
+        static bool AddIfMissing<T>(GameObject root) where T : Component
+        {
+            if (root.GetComponent<T>() != null)
+                return false;
+            root.AddComponent<T>();
+            return true;
         }
     }
 }

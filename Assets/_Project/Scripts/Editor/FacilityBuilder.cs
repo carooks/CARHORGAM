@@ -117,7 +117,8 @@ namespace HorrorGame.EditorTools
             BreakerPanel(props, kit, EntrancePosition(origin), lampLights, lampFixtures);
         }
 
-        static Vector3 CellCenter(Vector3 origin, int row, int column)
+        /// <summary>World position of a layout cell's centre at floor level.</summary>
+        public static Vector3 CellCenter(Vector3 origin, int row, int column)
         {
             return origin + new Vector3((column + 0.5f) * CellSize, 0f, (Rows - 1 - row + 0.5f) * CellSize);
         }

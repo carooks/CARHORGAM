@@ -29,6 +29,8 @@ namespace HorrorGame.Player
         public bool InteractPressed { get; private set; }
         public bool PausePressed { get; private set; }
         public bool PrimaryClickPressed { get; private set; }
+        /// <summary>F3: toggles the monster debug readout.</summary>
+        public bool DebugTogglePressed { get; private set; }
 
         void Update()
         {
@@ -43,7 +45,7 @@ namespace HorrorGame.Player
         {
             Move = Vector2.zero;
             LookDelta = Vector2.zero;
-            SprintHeld = JumpPressed = FlashlightPressed = InteractPressed = PausePressed = PrimaryClickPressed = false;
+            SprintHeld = JumpPressed = FlashlightPressed = InteractPressed = PausePressed = PrimaryClickPressed = DebugTogglePressed = false;
         }
 
 #if ENABLE_INPUT_SYSTEM
@@ -53,7 +55,7 @@ namespace HorrorGame.Player
             var mouse = Mouse.current;
 
             Vector2 move = Vector2.zero;
-            bool sprint = false, jump = false, flashlight = false, interact = false, pause = false;
+            bool sprint = false, jump = false, flashlight = false, interact = false, pause = false, debug = false;
             if (keyboard != null)
             {
                 if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) move.y += 1f;
@@ -65,6 +67,7 @@ namespace HorrorGame.Player
                 flashlight = keyboard.fKey.wasPressedThisFrame;
                 interact = keyboard.eKey.wasPressedThisFrame;
                 pause = keyboard.escapeKey.wasPressedThisFrame;
+                debug = keyboard.f3Key.wasPressedThisFrame;
             }
 
             Move = Vector2.ClampMagnitude(move, 1f);
@@ -73,6 +76,7 @@ namespace HorrorGame.Player
             FlashlightPressed = flashlight;
             InteractPressed = interact;
             PausePressed = pause;
+            DebugTogglePressed = debug;
             LookDelta = mouse != null ? mouse.delta.ReadValue() : Vector2.zero;
             PrimaryClickPressed = mouse != null && mouse.leftButton.wasPressedThisFrame;
         }
@@ -86,6 +90,7 @@ namespace HorrorGame.Player
             FlashlightPressed = Input.GetKeyDown(KeyCode.F);
             InteractPressed = Input.GetKeyDown(KeyCode.E);
             PausePressed = Input.GetKeyDown(KeyCode.Escape);
+            DebugTogglePressed = Input.GetKeyDown(KeyCode.F3);
             LookDelta = new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")) * LegacyMouseToPixels;
             PrimaryClickPressed = Input.GetMouseButtonDown(0);
         }
