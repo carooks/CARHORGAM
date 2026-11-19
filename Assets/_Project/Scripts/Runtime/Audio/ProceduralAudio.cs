@@ -21,6 +21,8 @@ namespace HorrorGame.Audio
         MonsterBreath,
         /// <summary>Harsh rising shriek, played when a monster starts chasing.</summary>
         Screech,
+        /// <summary>A fist or body hitting a thick glass pane: dull thump, frame rattle, faint ring.</summary>
+        GlassThud,
     }
 
     /// <summary>
@@ -48,6 +50,7 @@ namespace HorrorGame.Audio
                 case ProceduralSound.HeavyStep: clip = CreateHeavyStep(); break;
                 case ProceduralSound.MonsterBreath: clip = CreateBreath(); break;
                 case ProceduralSound.Screech: clip = CreateScreech(); break;
+                case ProceduralSound.GlassThud: clip = CreateGlassThud(); break;
                 default: clip = CreateClick(); break;
             }
             Cache[sound] = clip;
@@ -200,6 +203,28 @@ namespace HorrorGame.Audio
                 raw[i] = (sawA * 0.5f + sawB * 0.3f + noise * 0.35f) * envelope * tremolo;
             }
             return Finish("Screech", raw, length, 0.7f, false);
+        }
+
+        static AudioClip CreateGlassThud()
+        {
+            int length = SampleRate * 9 / 10;
+            var rng = new System.Random(53);
+            float lowpass = 0f;
+            float[] raw = new float[length];
+            for (int i = 0; i < length; i++)
+            {
+                float t = (float)i / SampleRate;
+                float white = (float)(rng.NextDouble() * 2.0 - 1.0);
+                lowpass += (white - lowpass) * 0.2f;
+                float thump = Sine(72f * (1f - t * 0.8f), t) * Mathf.Exp(-t * 22f);
+                float knock = lowpass * Mathf.Exp(-t * 60f);
+                // The pane rattling in its track: noise chopped at 31 Hz, dying out fast.
+                float rattle = white * Mathf.Max(0f, Sine(31f, t)) * Mathf.Exp(-t * 14f) * 0.25f;
+                // Thick glass rings faintly and inharmonically after the hit.
+                float ring = (Sine(1730f, t) * 0.5f + Sine(2610f, t) * 0.3f + Sine(3890f, t) * 0.2f) * Mathf.Exp(-t * 7f) * 0.12f;
+                raw[i] = thump * 1.1f + knock * 0.8f + rattle + ring;
+            }
+            return Finish("GlassThud", raw, length, 0.9f, false);
         }
 
         static float Sine(float frequency, float time) => Mathf.Sin(2f * Mathf.PI * frequency * time);

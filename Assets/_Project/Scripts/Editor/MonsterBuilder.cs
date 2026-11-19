@@ -121,6 +121,19 @@ namespace HorrorGame.EditorTools
             return monster;
         }
 
+        /// <summary>
+        /// For small test scenes: a NavMesh region over <paramref name="navBounds"/> and the Foreman at
+        /// <paramref name="spawn"/>, patrolling <paramref name="patrol"/> (Transforms) in order of the list.
+        /// </summary>
+        public static GameObject BuildInArena(GrayboxKit kit, Vector3 spawn, IReadOnlyList<Object> patrol, Bounds navBounds)
+        {
+            BuildNavMesh(navBounds.center, navBounds.size);
+            var monster = BuildBody(kit, spawn, out var eyes);
+            SerializedFields.SetArray(monster.GetComponent<MonsterBrain>(), "patrolPoints", patrol);
+            SerializedFields.SetArray(monster.GetComponent<MonsterPresentation>(), "eyes", eyes);
+            return monster;
+        }
+
         static void BuildNavMesh(Vector3 center, Vector3 size)
         {
             var navMeshObject = new GameObject(NavMeshName);
