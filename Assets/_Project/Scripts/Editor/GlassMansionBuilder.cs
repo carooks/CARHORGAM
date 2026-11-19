@@ -640,9 +640,9 @@ namespace HorrorGame.EditorTools
                     if (!reached)
                     {
                         unreachable++;
-                        string end = path.corners.Length > 0 ? path.corners[path.corners.Length - 1].ToString() : "none";
+                        string lastCorner = path.corners.Length > 0 ? path.corners[path.corners.Length - 1].ToString() : "none";
                         Debug.LogError($"[Horror Game] Glass mansion: can't walk from the start to {room.name} " +
-                                       $"(status {path.status}, {path.corners.Length} corners, closest point reached {end}).");
+                                       $"(status {path.status}, {path.corners.Length} corners, closest point reached {lastCorner}).");
                         if (room.name.Contains("_H"))
                             LogWhyBlocked(start.position, room.position, path);
                     }
