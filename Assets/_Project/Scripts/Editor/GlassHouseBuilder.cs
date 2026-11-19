@@ -33,14 +33,14 @@ namespace HorrorGame.EditorTools
         const string EtchGlowTexturePath = TexturesFolder + "/T_GlassEtchGlow.png";
 
         const float RoomSize = 18f;
-        const float Cell = 6f;
+        internal const float Cell = 6f;
         const float Height = 3.6f;
         const float WallThickness = 0.4f;
-        const float PaneLength = 2.96f;
+        internal const float PaneLength = 2.96f;
         const float PaneHeight = 3.48f;
         const float PaneThickness = 0.05f;
-        const float PaneBase = 0.03f;
-        const float TrackOffset = 0.1f;
+        internal const float PaneBase = 0.03f;
+        internal const float TrackOffset = 0.1f;
 
         /// <summary>Panes the ghost can float through (index = section * 2 + pane in pair).</summary>
         static readonly HashSet<int> HauntedPanes = new HashSet<int> { 2, 7, 15, 22 };
@@ -54,6 +54,9 @@ namespace HorrorGame.EditorTools
         static readonly Vector3 GhostSpawn = new Vector3(9f, 1.3f, 9f);
 
         static GrayboxKit kit;
+
+        /// <summary>The kit the shared helpers below use. Other glass builders (the mansion) set it first.</summary>
+        internal static GrayboxKit Kit { get => kit; set => kit = value; }
 
         [MenuItem("Horror Game/Build Glass House Test Room", priority = 30)]
         static void BuildFromMenu()
@@ -227,7 +230,7 @@ namespace HorrorGame.EditorTools
             return panes;
         }
 
-        static GlassPane BuildPane(string name, Transform parent, Vector3 position, Quaternion rotation, Vector3 openOffset,
+        internal static GlassPane BuildPane(string name, Transform parent, Vector3 position, Quaternion rotation, Vector3 openOffset,
             bool haunted, Material material)
         {
             var root = new GameObject(name);
@@ -268,7 +271,7 @@ namespace HorrorGame.EditorTools
             return pane;
         }
 
-        static void Part(string name, Transform parent, Vector3 localPosition, Vector3 scale, Material material, ShadowCastingMode shadows)
+        internal static void Part(string name, Transform parent, Vector3 localPosition, Vector3 scale, Material material, ShadowCastingMode shadows)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
@@ -281,7 +284,7 @@ namespace HorrorGame.EditorTools
             renderer.shadowCastingMode = shadows;
         }
 
-        static void SetVector3(Object target, string field, Vector3 value)
+        internal static void SetVector3(Object target, string field, Vector3 value)
         {
             var so = new SerializedObject(target);
             var property = so.FindProperty(field);
@@ -298,10 +301,26 @@ namespace HorrorGame.EditorTools
 
         static void BuildLever(Transform parent, GlassHouse house)
         {
-            // On the south wall of the starting cell, behind the player's spawn.
+            // On the south wall of the starting cell, behind the player's spawn, facing north into the room.
+            BuildLever(parent, house, new Vector3(1.6f, 0f, 0f), Quaternion.identity, false);
+        }
+
+        /// <summary>A shift lever at <paramref name="position"/> (its foot), facing along <paramref name="rotation"/>'s forward.
+        /// <paramref name="freestanding"/> adds a pedestal behind it so it can stand in the middle of a room.</summary>
+        internal static GlassHouseLever BuildLever(Transform parent, GlassHouse house, Vector3 position, Quaternion rotation, bool freestanding)
+        {
             var root = new GameObject("ShiftLever");
             root.transform.SetParent(parent, false);
-            root.transform.SetPositionAndRotation(new Vector3(1.6f, 0f, 0f), Quaternion.identity); // faces north, into the room
+            root.transform.SetPositionAndRotation(position, rotation);
+            if (freestanding)
+            {
+                var pedestal = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                pedestal.name = "Pedestal";
+                pedestal.transform.SetParent(root.transform, false);
+                pedestal.transform.localPosition = new Vector3(0f, 0.9f, -0.2f);
+                pedestal.transform.localScale = new Vector3(0.7f, 1.8f, 0.4f);
+                pedestal.GetComponent<Renderer>().sharedMaterial = kit.Metal;
+            }
             var collider = root.AddComponent<BoxCollider>();
             collider.center = new Vector3(0f, 1.35f, 0.18f);
             collider.size = new Vector3(0.6f, 1.1f, 0.36f);
@@ -328,15 +347,19 @@ namespace HorrorGame.EditorTools
             var lever = root.AddComponent<GlassHouseLever>();
             SerializedFields.Set(lever, "house", house);
             SerializedFields.Set(lever, "handle", pivot);
+            return lever;
         }
 
-        static void BuildGhost()
+        static void BuildGhost() => BuildGhost(GhostSpawn, null);
+
+        /// <summary>A ghost at <paramref name="position"/>. <paramref name="roamArea"/> null keeps the component's default (the test room).</summary>
+        internal static GlassGhost BuildGhost(Vector3 position, Bounds? roamArea)
         {
             var body = TransparentMaterial("M_Ghost", new Color(0.75f, 0.85f, 1f, 0.22f), new Color(0.22f, 0.28f, 0.36f), null, null);
             var eyes = kit.Get("M_GhostEyes", new Color(0.01f, 0.01f, 0.01f), 0f);
 
             var root = new GameObject("Ghost");
-            root.transform.position = GhostSpawn;
+            root.transform.position = position;
             var renderers = new List<Object>
             {
                 GhostPart(PrimitiveType.Capsule, "Body", root.transform, new Vector3(0f, -0.35f, 0f), new Vector3(0.5f, 0.6f, 0.4f), body),
@@ -346,6 +369,14 @@ namespace HorrorGame.EditorTools
             };
             var ghost = root.AddComponent<GlassGhost>();
             SerializedFields.SetArray(ghost, "renderers", renderers);
+            SerializedFields.SetFloat(ghost, "hoverHeight", position.y);
+            if (roamArea.HasValue)
+            {
+                var so = new SerializedObject(ghost);
+                so.FindProperty("roamArea").boundsValue = roamArea.Value;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            return ghost;
         }
 
         static Renderer GhostPart(PrimitiveType type, string name, Transform parent, Vector3 localPosition, Vector3 scale, Material material)
@@ -384,7 +415,7 @@ namespace HorrorGame.EditorTools
         // ------------------------------------------------------------------ materials
 
         /// <summary>Nearly clear, very smooth glass with faint etched lines that glow just enough to read in the dark.</summary>
-        static Material GlassMaterial(string name, Color etchGlow)
+        internal static Material GlassMaterial(string name, Color etchGlow)
         {
             EnsureEtchTextures();
             var baseMap = AssetDatabase.LoadAssetAtPath<Texture2D>(EtchTexturePath);
@@ -397,7 +428,7 @@ namespace HorrorGame.EditorTools
         /// highlights from the flashlight stay bright, which is what makes glass read as glass.
         /// Settings are re-applied on every build so the look is defined here.
         /// </summary>
-        static Material TransparentMaterial(string name, Color baseColor, Color emission, Texture2D baseMap, Texture2D emissionMap)
+        internal static Material TransparentMaterial(string name, Color baseColor, Color emission, Texture2D baseMap, Texture2D emissionMap)
         {
             string path = $"{ProjectPaths.Materials}/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -487,7 +518,7 @@ namespace HorrorGame.EditorTools
 
         // ------------------------------------------------------------------ scene setup
 
-        static void ConfigureAtmosphere()
+        internal static void ConfigureAtmosphere()
         {
             RenderSettings.skybox = null;
             RenderSettings.sun = null;
@@ -504,7 +535,7 @@ namespace HorrorGame.EditorTools
             volume.sharedProfile = RenderPipelineSetup.EnsurePostFxProfile();
         }
 
-        static void CreateAmbience()
+        internal static void CreateAmbience()
         {
             var go = new GameObject("Ambience_Drone");
             var ambience = go.AddComponent<AmbientSound>();
@@ -513,22 +544,26 @@ namespace HorrorGame.EditorTools
             SerializedFields.SetBool(ambience, "spatial", false);
         }
 
-        static void SpawnPlayer(GameObject prefab)
+        static void SpawnPlayer(GameObject prefab) => SpawnPlayer(prefab, PlayerSpawn, Quaternion.Euler(0f, 45f, 0f));
+
+        internal static void SpawnPlayer(GameObject prefab, Vector3 position, Quaternion rotation)
         {
             var player = (GameObject)PrefabUtility.InstantiatePrefab(prefab, SceneManager.GetActiveScene());
-            player.transform.SetPositionAndRotation(PlayerSpawn, Quaternion.Euler(0f, 45f, 0f));
+            player.transform.SetPositionAndRotation(position, rotation);
             var camera = player.GetComponentInChildren<Camera>();
             if (camera != null)
                 camera.backgroundColor = FogColor;
         }
 
-        static void AddToBuildSettings()
+        static void AddToBuildSettings() => AddToBuildSettings(ScenePath);
+
+        internal static void AddToBuildSettings(string scenePath)
         {
             var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
             foreach (var s in scenes)
-                if (s.path == ScenePath)
+                if (s.path == scenePath)
                     return;
-            scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
+            scenes.Add(new EditorBuildSettingsScene(scenePath, true));
             EditorBuildSettings.scenes = scenes.ToArray();
         }
     }

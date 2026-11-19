@@ -6,12 +6,14 @@ using UnityEngine;
 namespace HorrorGame.Glass
 {
     /// <summary>
-    /// A heavy wall lever that makes the glass house shift right away (after a short warning).
+    /// A heavy lever that makes the glass house, and any houses in alsoShifts, shift right away after a short warning.
     /// Loud: monsters nearby hear it. Can't be pulled again until the panes have stopped.
     /// </summary>
     public class GlassHouseLever : MonoBehaviour, IInteractable
     {
         [SerializeField] GlassHouse house;
+        [Tooltip("Other houses (floors) this lever shifts at the same time.")]
+        [SerializeField] GlassHouse[] alsoShifts = System.Array.Empty<GlassHouse>();
         [Tooltip("The handle; it swings down when pulled and springs back.")]
         [SerializeField] Transform handle;
         [SerializeField] float pulledAngle = 70f;
@@ -50,6 +52,9 @@ namespace HorrorGame.Glass
             clank.PlayOneShot(clank.clip, 1f);
             Noise.Emit(transform.position, noiseRadius, interactor != null ? interactor.gameObject : gameObject);
             house.RequestShift(warningSeconds);
+            foreach (var other in alsoShifts)
+                if (other != null)
+                    other.RequestShift(warningSeconds);
         }
 
         void Update()

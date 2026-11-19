@@ -30,6 +30,8 @@ namespace HorrorGame.Glass
         [SerializeField] float shiftInterval = 45f;
         [Tooltip("Warning (red lights, buzzer) before a timed shift.")]
         [SerializeField] float warningTime = 4f;
+        [Tooltip("Extra delay before the first timed shift, so several houses (floors) don't all shift together.")]
+        [SerializeField] float firstShiftOffset;
         [Tooltip("Same seed, same sequence of layouts. 0 picks a new seed every run.")]
         [SerializeField] int seed;
 
@@ -37,10 +39,16 @@ namespace HorrorGame.Glass
         [SerializeField] Light[] warningLights = Array.Empty<Light>();
         [SerializeField] float warningLightIntensity = 3f;
         [Range(0f, 1f)] [SerializeField] float buzzerVolume = 0.5f;
+        [Tooltip("Heard everywhere. Turn off when there are several houses (one per floor): the buzzer then sounds from this object.")]
+        [SerializeField] bool globalBuzzer = true;
 
         [Header("Debug")]
         [Tooltip("Shows a small countdown at the top of the screen.")]
         [SerializeField] bool showCountdown = true;
+        [Tooltip("Name shown in the countdown, e.g. \"Basement\". Empty shows just \"glass\".")]
+        [SerializeField] string displayName = "";
+        [Tooltip("Countdown line, from the top. Give each house its own row.")]
+        [SerializeField] int countdownRow;
 
         System.Random rng;
         int[] layout = Array.Empty<int>();
@@ -81,7 +89,10 @@ namespace HorrorGame.Glass
             buzzer.clip = ProceduralAudio.GetClip(ProceduralSound.ElectricalBuzz);
             buzzer.loop = true;
             buzzer.playOnAwake = false;
-            buzzer.spatialBlend = 0f; // heard everywhere in the house
+            buzzer.spatialBlend = globalBuzzer ? 0f : 1f;
+            buzzer.minDistance = 4f;
+            buzzer.maxDistance = 30f;
+            buzzer.rolloffMode = AudioRolloffMode.Linear;
             buzzer.pitch = 0.5f;
             buzzer.volume = buzzerVolume;
             SetWarningLights(0f);
@@ -90,7 +101,7 @@ namespace HorrorGame.Glass
         void Start()
         {
             ApplyLayout(PickLayout(), instant: true);
-            nextShiftAt = Time.time + Mathf.Max(shiftInterval, 0f);
+            nextShiftAt = Time.time + Mathf.Max(shiftInterval, 0f) + Mathf.Max(firstShiftOffset, 0f);
         }
 
         void Update()
@@ -203,10 +214,12 @@ namespace HorrorGame.Glass
                     fontSize = Mathf.Max(14, Screen.height / 45),
                 };
             }
-            string text = ShiftPending ? "THE GLASS IS MOVING" :
-                IsShifting ? "..." : $"glass shifts in {Mathf.CeilToInt(Mathf.Max(0f, SecondsUntilShift))}";
+            string what = string.IsNullOrEmpty(displayName) ? "glass" : displayName + " glass";
+            string text = ShiftPending ? what.ToUpperInvariant() + " IS MOVING" :
+                IsShifting ? what + "..." : $"{what} shifts in {Mathf.CeilToInt(Mathf.Max(0f, SecondsUntilShift))}";
             countdownStyle.normal.textColor = ShiftPending ? new Color(1f, 0.3f, 0.25f, 0.9f) : new Color(1f, 1f, 1f, 0.35f);
-            GUI.Label(new Rect(0f, 8f, Screen.width, 40f), text, countdownStyle);
+            float line = countdownStyle.fontSize * 1.5f;
+            GUI.Label(new Rect(0f, 8f + countdownRow * line, Screen.width, line), text, countdownStyle);
         }
     }
 }
