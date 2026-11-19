@@ -620,6 +620,15 @@ namespace HorrorGame.EditorTools
                 return rooms.Count;
             }
             Debug.Log($"[Horror Game] Reachability bake: {sources.Count} collider sources in {bounds}.");
+            // Glass panes carve the NavMesh through their NavMeshObstacles, even in the editor. Switch them
+            // off for the check, so it answers "can you get everywhere when the glass is open".
+            var obstacles = new List<NavMeshObstacle>();
+            foreach (var obstacle in Object.FindObjectsByType<NavMeshObstacle>(FindObjectsSortMode.None))
+                if (obstacle.enabled)
+                {
+                    obstacle.enabled = false;
+                    obstacles.Add(obstacle);
+                }
             var instance = NavMesh.AddNavMeshData(data);
             int unreachable = 0;
             try
@@ -648,6 +657,8 @@ namespace HorrorGame.EditorTools
             }
             finally
             {
+                foreach (var obstacle in obstacles)
+                    obstacle.enabled = true;
                 instance.Remove();
                 Object.DestroyImmediate(data);
             }
