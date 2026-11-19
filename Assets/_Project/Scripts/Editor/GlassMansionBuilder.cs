@@ -608,6 +608,16 @@ namespace HorrorGame.EditorTools
                 new List<NavMeshBuildMarkup>(), sources);
             // Same filter as the runtime bake: no players, monsters or carving obstacles (the glass).
             sources.RemoveAll(HorrorGame.AI.RuntimeNavMesh.IsMovingThing);
+            var shapes = new Dictionary<string, int>();
+            foreach (var source in sources)
+            {
+                string key = $"{source.shape}/{(source.component != null ? source.component.GetType().Name : "null")}/area {source.area}";
+                shapes[key] = shapes.TryGetValue(key, out int n) ? n + 1 : 1;
+            }
+            var summary = new System.Text.StringBuilder("[Horror Game] Reachability bake sources by shape/component/area:");
+            foreach (var pair in shapes)
+                summary.Append($"\n  {pair.Key}: {pair.Value}");
+            Debug.Log(summary.ToString());
             var settings = NavMesh.GetSettingsByID(0);
             settings.agentRadius = 0.4f;
             settings.agentHeight = 2.2f;
