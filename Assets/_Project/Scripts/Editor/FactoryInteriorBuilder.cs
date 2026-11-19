@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using HorrorGame.Audio;
 using HorrorGame.Rendering;
+using HorrorGame.World;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -132,6 +133,7 @@ namespace HorrorGame.EditorTools
             CreatePostProcessing();
             CreateAmbience();
             SpawnPlayer(playerPrefab);
+            new GameObject("FallDeath").AddComponent<FallDeath>();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddToBuildSettings();
@@ -162,7 +164,7 @@ namespace HorrorGame.EditorTools
                 new Vector3(128f, 0f, 12.5f), new Vector3(146f, 0f, 2f), new Vector3(146f, 0f, 27f), // warehouse
                 new Vector3(122f, 0f, 27f),
                 new Vector3(0f, 0f, -32f), new Vector3(24f, 0f, -28f),                          // west wing floor 1
-                new Vector3(0f, StoreyHeight, -30f), new Vector3(14f, StoreyHeight, -32f),       // west wing floor 2
+                new Vector3(-4f, StoreyHeight, -34f), new Vector3(14f, StoreyHeight, -32f),       // west wing floor 2
                 new Vector3(55f, 0f, -32f), new Vector3(85f, 0f, -30f),                         // east wing
             };
             for (int i = 0; i < points.Length; i++)

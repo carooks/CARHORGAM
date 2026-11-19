@@ -21,8 +21,8 @@ namespace HorrorGame.EditorTools
 
         static void BuildHallShell(Transform parent)
         {
-            Box("Floor", parent, new Vector3(HallLength * 0.5f, -0.05f, HallWidth * 0.5f),
-                new Vector3(HallLength + 0.5f, 0.1f, HallWidth + 0.5f), kit.ConcreteFloor);
+            FloorWithHoles(parent, "Floor", 0f, 0.1f, Rect.MinMaxRect(-0.25f, -0.25f, HallLength + 0.25f, HallWidth + 0.25f),
+                new[] { PitRect }, kit.ConcreteFloor);
 
             // South wall: receiving-room door, a big sliding door and a side door to the courtyard, windows elsewhere.
             var south = new List<Opening>
@@ -342,6 +342,8 @@ namespace HorrorGame.EditorTools
             {
                 float x = Rand(4f, 112f);
                 float z = Chance(0.5) ? Rand(6.8f, 7.6f) : Rand(16.4f, 17.2f);
+                if (InPit(x, z))
+                    continue;
                 if (!FactoryProps.Place(parent, new Vector3(x, 0f, z), Rand(0f, 360f),
                         i % 3 == 0 ? Synty.CardboardJunk : i % 3 == 1 ? Synty.Cardboard2 : Synty.Papers, null, i % 3 != 2))
                     Box("LooseCarton", parent, new Vector3(x, 0.15f, z), new Vector3(0.45f, 0.3f, 0.35f), kit.Cardboard, true,
@@ -359,6 +361,8 @@ namespace HorrorGame.EditorTools
                     continue;
                 if (!southSide && x < 17f)
                     continue;
+                if (InPit(x, z, 3f))
+                    continue;
                 FactoryProps.Place(parent, new Vector3(x, 0f, z), yaw, Synty.Workbench,
                     () => Box("Workbench", parent, new Vector3(x, 0.45f, z), new Vector3(2f, 0.9f, 0.8f), plank));
                 FactoryProps.Place(parent, new Vector3(x, 1.5f, southSide ? 0.3f : HallWidth - 0.3f), yaw, Synty.ToolBoard, null, false);
@@ -374,6 +378,8 @@ namespace HorrorGame.EditorTools
             {
                 float x = Rand(6f, 108f);
                 float z = Chance(0.5) ? Rand(1.4f, 2.4f) : Rand(21.6f, 22.8f);
+                if (InPit(x, z, 2f))
+                    continue;
                 CrateStack(parent, new Vector3(x, 0f, z));
             }
 
@@ -409,31 +415,29 @@ namespace HorrorGame.EditorTools
         {
             float x0 = CollapsedBays[0] * BayWidth;
             float span = CollapsedBays.Length * BayWidth;
-            for (int i = 0; i < 26; i++)
-            {
-                var rot = Quaternion.Euler(Rand(-25f, 25f), Rand(0f, 180f), Rand(-20f, 20f));
-                Box("FallenBoard", parent, new Vector3(x0 + Rand(0.5f, span - 0.5f), Rand(0.1f, 0.8f), Rand(1f, 7.5f)),
-                    new Vector3(Rand(0.4f, 0.8f), 0.08f, Rand(2f, 4.5f)), roofBoards, false, rot);
-            }
-            for (int i = 0; i < 10; i++)
-                if (!FactoryProps.Place(parent, new Vector3(x0 + Rand(0.8f, span - 0.8f), 0f, Rand(1.5f, 7f)), Rand(0f, 360f),
-                        i % 3 == 0 ? Synty.RubblePlank : i % 2 == 0 ? Synty.Rubble : Synty.Rubble2, null, false))
-                    Box("Rubble", parent, new Vector3(x0 + Rand(0.8f, span - 0.8f), Rand(0.1f, 0.5f), Rand(1.5f, 6.5f)),
-                        Vector3.one * Rand(0.3f, 0.8f), debris, false, Quaternion.Euler(Rand(0f, 90f), Rand(0f, 90f), Rand(0f, 90f)));
-            Blocker("RubbleMound", parent, new Vector3(x0 + span * 0.5f, 0.4f, 4.5f), new Vector3(span - 2f, 0.8f, 5f));
 
-            Beam("FallenChord", parent, new Vector3(x0 + 0.6f, 0f, 0.8f), new Vector3(x0 + 4.5f, 4.2f, 7.6f), 0.25f, 0.3f, timber, true);
-            Beam("FallenChord", parent, new Vector3(x0 + 11f, 0f, 1.5f), new Vector3(x0 + 8f, 3.4f, 7.4f), 0.25f, 0.3f, timber, true);
-            Box("WreckBase", parent, new Vector3(x0 + 3f, 0.25f, 5.2f), new Vector3(7f, 0.5f, 2.6f), iron, true, Quaternion.Euler(0f, 4f, 3f));
-            Box("WreckFrame", parent, new Vector3(x0 + 6.2f, 1.1f, 5.6f), new Vector3(0.35f, 2.8f, 2.6f), iron, true, Quaternion.Euler(0f, 10f, 38f));
-            Cyl("WreckDrum", parent, new Vector3(x0 - 0.4f, 0.9f, 4.2f), 1.8f, 0.8f, iron, new Vector3(0.3f, 0f, 1f), true);
+            // The roof came down hard enough to punch through the floor into the basement: see BuildPit.
+            BuildPit(parent);
+
+            // What's left on the floor around the hole.
+            for (int i = 0; i < 10; i++)
+            {
+                var p = new Vector3(x0 + Rand(0.5f, span - 0.5f), Rand(0.05f, 0.3f), Rand(7.9f, 8.3f));
+                if (Chance(0.5))
+                    p = new Vector3(Chance(0.5) ? Rand(52.3f, 53.7f) : Rand(64f, 66f), Rand(0.05f, 0.3f), Rand(3f, 7.5f));
+                Box("FallenBoard", parent, p, new Vector3(Rand(0.3f, 0.6f), 0.06f, Rand(1f, 2.2f)), roofBoards, false,
+                    Quaternion.Euler(Rand(-8f, 8f), Rand(0f, 180f), Rand(-8f, 8f)));
+            }
+            for (int i = 0; i < 4; i++)
+                FactoryProps.Place(parent, new Vector3(Rand(64.2f, 66f), 0f, Rand(3f, 7f)), Rand(0f, 360f),
+                    i % 2 == 0 ? Synty.Rubble : Synty.Rubble2, null, false);
 
             // Moonlight pouring through the hole: a real shadowed light plus a visible shaft.
             var light = GrayboxKit.SpotLight("MoonShaft", parent, new Vector3(x0 + span * 0.5f, RidgeHeight + 3f, 2f),
-                Quaternion.Euler(75f, 0f, 0f), new Color(0.6f, 0.7f, 1f), 9f, 22f, 60f);
+                Quaternion.Euler(75f, 0f, 0f), new Color(0.6f, 0.7f, 1f), 9f, 30f, 60f);
             light.shadows = LightShadows.Soft;
             for (int i = 0; i < 2; i++)
-                MoonShaft("MoonHaze", parent, new Vector3(x0 + 3f + i * 6f, RidgeHeight - 0.5f, 3.5f), new Vector3(0.05f, -1f, 0.25f), 12f, 3.2f);
+                MoonShaft("MoonHaze", parent, new Vector3(x0 + 3f + i * 6f, RidgeHeight - 0.5f, 3.5f), new Vector3(0.05f, -1f, 0.25f), 16f, 3.2f);
         }
 
         // ------------------------------------------------------------------ Foreman's office
@@ -591,6 +595,8 @@ namespace HorrorGame.EditorTools
                 else if (roll < 0.9) c = new Vector3(Rand(1f, 119f), 0f, Rand(0.5f, 23.5f));
                 else c = new Vector3(Rand(1f, 13f), 0f, Rand(-11f, -1f));
                 c.y = 0.004f;
+                if (InPit(c.x, c.z, 0.1f))
+                    continue;
                 float yaw = Rand(0f, Mathf.PI);
                 var along = new Vector3(Mathf.Cos(yaw), 0f, Mathf.Sin(yaw)) * 0.05f;
                 var across = new Vector3(-Mathf.Sin(yaw), 0f, Mathf.Cos(yaw)) * 0.008f;

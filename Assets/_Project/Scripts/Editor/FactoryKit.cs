@@ -258,6 +258,57 @@ namespace HorrorGame.EditorTools
             Piece($"Pier_{i}", cursor, length, 0f, height);
         }
 
+        /// <summary>
+        /// A flat floor slab over <paramref name="area"/> (x, z) with rectangular holes cut out, as few boxes as
+        /// possible. With <paramref name="underside"/>, a joist layer is hung below it (for upper floors).
+        /// </summary>
+        static void FloorWithHoles(Transform parent, string name, float topY, float thickness, Rect area, Rect[] holes,
+            Material material, Material underside = null)
+        {
+            var group = GrayboxKit.Group(name, parent).transform;
+            var xs = new SortedSet<float> { area.xMin, area.xMax };
+            var zs = new SortedSet<float> { area.yMin, area.yMax };
+            foreach (var h in holes)
+            {
+                xs.Add(Mathf.Clamp(h.xMin, area.xMin, area.xMax));
+                xs.Add(Mathf.Clamp(h.xMax, area.xMin, area.xMax));
+                zs.Add(Mathf.Clamp(h.yMin, area.yMin, area.yMax));
+                zs.Add(Mathf.Clamp(h.yMax, area.yMin, area.yMax));
+            }
+            var x = new List<float>(xs);
+            var z = new List<float>(zs);
+
+            void Emit(float x0, float x1, float z0, float z1)
+            {
+                if (x1 - x0 < 0.01f || z1 - z0 < 0.01f)
+                    return;
+                var center = new Vector3((x0 + x1) * 0.5f, topY - thickness * 0.5f, (z0 + z1) * 0.5f);
+                Box("Slab", group, center, new Vector3(x1 - x0, thickness, z1 - z0), material);
+                if (underside != null)
+                    Box("Joists", group, new Vector3(center.x, topY - thickness - 0.1f, center.z), new Vector3(x1 - x0, 0.2f, z1 - z0), underside, false);
+            }
+
+            for (int zi = 0; zi < z.Count - 1; zi++)
+            {
+                float runStart = float.NaN;
+                for (int xi = 0; xi < x.Count - 1; xi++)
+                {
+                    var mid = new Vector2((x[xi] + x[xi + 1]) * 0.5f, (z[zi] + z[zi + 1]) * 0.5f);
+                    bool inHole = false;
+                    foreach (var h in holes)
+                        inHole |= h.Contains(mid);
+                    if (!inHole && float.IsNaN(runStart))
+                        runStart = x[xi];
+                    bool last = xi == x.Count - 2;
+                    if (!float.IsNaN(runStart) && (inHole || last))
+                    {
+                        Emit(runStart, inHole ? x[xi] : x[xi + 1], z[zi], z[zi + 1]);
+                        runStart = float.NaN;
+                    }
+                }
+            }
+        }
+
         /// <summary>Simple railing: posts, top and mid rail, plus an invisible full-height collider.</summary>
         static void Railing(string name, Transform parent, Vector3 a, Vector3 b, Material material)
         {

@@ -49,7 +49,7 @@ Coordinates are in metres. The origin is the machine hall's south-west corner, +
 | East wing | X 44..96, Z -40..-24 | 3 storeys. Floor 1 is the canteen and locker room; upper floors are sealed |
 | Courtyard | X -10..150, Z -24..0 | Trucks, a 40 m smokestack, dumpsters, weeds, sodium pole lamps, fences |
 | Receiving room | X 0..14, Z -12..0 | Roll-up door stuck open, pallets, main breaker (starts OFF) |
-| Machine hall | X 0..120, Z 0..24 | 20 bays, 8 m eaves, 21 match machines, line shafts, two collapsed bays at X 54..66 |
+| Machine hall | X 0..120, Z 0..24 | 20 bays, 8 m eaves, 21 match machines, line shafts, two collapsed bays at X 54..66 over a basement pit |
 | Foreman's office | X 112..120, Z 14..24 | 3.5 m up a stair; desk lamp on with no power |
 | Warehouse | X 120..150, Z -6..30 | 9 m high, pallet racking, three broken skylights, one collapsed rack run |
 | Dip room | X 0..16, Z 24..36 | Burnt out |
@@ -58,6 +58,25 @@ Coordinates are in metres. The origin is the machine hall's south-west corner, +
 The scene exposes `FactoryInteriorBuilder.PlayerSpawn` and `NavBounds` (everything walkable)
 for the monster code. `AI_Waypoints` holds 33 markers along the routes, on the ground, the
 office platform and the west wing's second floor.
+
+## Fall traps
+
+Each trap warns you before it gets you.
+
+- **Basement pit** (X 54..63.5, Z 0..7.6). The roof came through the floor here into a 7 m
+  basement. Torn hazard tape, a sign and moonlight mark the edge, and grit trickles into the dark
+  when you get close.
+- **Plank bridge.** A rotten bridge crosses the pit along the south aisle. It creaks as you
+  approach, sags when you step on it, and breaks 1.6 s later, even if you step back off.
+- **Rotten floorboards** (west wing, floor 2, locker room). One board is already missing. They
+  drop you a storey: a hard landing, but you survive.
+
+`FallDeath` (Runtime/World) handles the falls. A drop of 5.5 m or more kills you: a caption, a
+"Falls: N" counter, and a respawn at the start about 3 s later. Drops of 3 to 5.5 m only thud and
+jolt the camera. Traps reset when you respawn.
+
+The trap pieces are `CollapsingFloor`, `TrapCue` and `TrapSounds`, all built from code with no
+audio files.
 
 ## Look
 
