@@ -82,13 +82,17 @@ namespace HorrorGame.AI
             IsBuilt = instance.valid;
         }
 
-        /// <summary>Players, monsters, triggers and physics props must not become part of the walkable map.</summary>
-        static bool IsMovingThing(NavMeshBuildSource source)
+        /// <summary>Players, monsters, triggers, physics props and carving obstacles must not become part of the walkable map.</summary>
+        public static bool IsMovingThing(NavMeshBuildSource source)
         {
             var component = source.component;
             if (component == null)
                 return false;
             if (component is Collider collider && collider.isTrigger)
+                return true;
+            // Safeguard: obstacles (like sliding glass) carve the NavMesh at runtime and must never be
+            // baked in, or their spot would stay blocked after they move away.
+            if (component is NavMeshObstacle)
                 return true;
             return component.GetComponentInParent<CharacterController>() != null
                    || component.GetComponentInParent<NavMeshAgent>() != null

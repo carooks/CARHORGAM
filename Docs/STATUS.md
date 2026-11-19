@@ -160,6 +160,34 @@ get split up by glass, can still see each other, and can't help directly. Built 
 8. Watch the ghost: it should only cross closed glass at the green-etched panes.
 9. Commit the new scene, materials (M_Glass*, M_Ghost*), textures (Textures/T_GlassEtch*) and build settings.
 
+### Glass mansion, milestone 1: three floors (not yet built in Unity)
+
+The full-size version of the glass house. Menu **Horror Game > Build Glass Mansion** generates
+`Scenes/GlassMansion.unity` from three text floor plans at the top of `GlassMansionBuilder.cs`
+(basement, ground floor, upper floor; 30 x 24 m on 6 m cells; the file explains the plan format).
+
+- Rooms are letters; neighbouring rooms with different letters get sliding glass between them.
+- Two staircases (basement to ground, ground to upper), a two-storey atrium with railings, and
+  glass floor panels you can look down through.
+- Each floor's glass shifts on its own timer (15 s apart, one countdown line per floor). The lever
+  in the basement shifts every floor at once.
+- The Foreman is only a stand-in for testing chases: the mansion's villains will be its own ghosts.
+  A placeholder ghost drifts on the ground floor.
+- The build checks the plans and logs an error for any room that can't be walked to from the start
+  with all glass open.
+
+Planned next: milestone 2, a reason to split up (the basement player controls which glass moves),
+then the mansion's ghosts (a machine pulse that makes them flash visible, ghosts that only knock
+you down or carry you off to another cell, clearly different silhouettes from deadly ones), then the look.
+
+Monster ideas so far (models from Meshy in project files, not in the game yet):
+- **The crawler**: a tall, thin woman who stands upright when still and runs on all fours like a
+  dog. She runs under the glass floor panels beneath the players and bangs on the glass from below
+  as a jump scare. Each bang cracks the pane a bit more; after enough bangs it breaks and drops
+  whoever is standing on it. A broken pane stays broken: a permanent hole down to her floor. Needs longer arms and a custom all-fours run.
+- **The ink monster**: a bulky figure made of black tendrils with glowing eyes.
+- **The hooded ghost**: a clawed wraith, a fit for the knock-down or carry-away role.
+
 ### Next milestone
 
 After the Foreman is verified: Phase 3 milestone 2, environmental events and randomised scares,
