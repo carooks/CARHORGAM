@@ -180,6 +180,14 @@ Planned next: milestone 2, a reason to split up (the basement player controls wh
 then the mansion's ghosts (a machine pulse that makes them flash visible, ghosts that only knock
 you down or carry you off to another cell, clearly different silhouettes from deadly ones), then the look.
 
+Monster ideas so far (models from Meshy in project files, not in the game yet):
+- **The crawler**: a tall, thin woman who stands upright when still and runs on all fours like a
+  dog. She runs under the glass floor panels beneath the players and bangs on the glass from below
+  as a jump scare. Each bang cracks the pane a bit more; after enough bangs it breaks and drops
+  whoever is standing on it. Needs longer arms and a custom all-fours run.
+- **The ink monster**: a bulky figure made of black tendrils with glowing eyes.
+- **The hooded ghost**: a clawed wraith, a fit for the knock-down or carry-away role.
+
 ### Next milestone
 
 After the Foreman is verified: Phase 3 milestone 2, environmental events and randomised scares,
