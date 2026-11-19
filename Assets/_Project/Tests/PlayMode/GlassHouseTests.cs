@@ -89,6 +89,39 @@ namespace HorrorGame.Tests
         }
 
         [UnityTest]
+        public IEnumerator OpeningAPane_LetsMonstersPathThroughTheGap()
+        {
+            Box("Floor", new Vector3(0f, -0.1f, 0f), new Vector3(24f, 0.2f, 24f));
+            var panes = new List<GlassPane>();
+            for (int i = -4; i <= 4; i++)
+                panes.Add(SpawnPane(new Vector3(i * 3f, 0f, 0f), false));
+            Physics.SyncTransforms();
+            var navMesh = new GameObject("TestNavMesh");
+            navMesh.transform.position = new Vector3(0f, 2f, 0f);
+            navMesh.AddComponent<RuntimeNavMesh>(); // bakes now, with every pane closed
+            spawned.Add(navMesh);
+
+            var path = new NavMeshPath();
+            var south = new Vector3(0f, 0f, -5f);
+            var north = new Vector3(0f, 0f, 5f);
+            yield return WaitSeconds(1f); // let the closed panes carve
+            NavMesh.CalculatePath(Sample(south), Sample(north), NavMesh.AllAreas, path);
+            Assert.AreNotEqual(NavMeshPathStatus.PathComplete, path.status, "Closed glass should block the path.");
+
+            panes[4].SetClosed(false, instant: true); // the middle pane slides aside
+            yield return WaitSeconds(2f); // carving updates once the obstacle has stopped
+            NavMesh.CalculatePath(Sample(south), Sample(north), NavMesh.AllAreas, path);
+            Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status,
+                "With a pane open there must be a way through: the bake must not bake the panes in.");
+        }
+
+        static Vector3 Sample(Vector3 point)
+        {
+            Assert.IsTrue(NavMesh.SamplePosition(point, out var hit, 2f, NavMesh.AllAreas), $"No NavMesh near {point}.");
+            return hit.position;
+        }
+
+        [UnityTest]
         public IEnumerator Layout_OpensAtMostOnePanePerPair_AndPanesSlideThere()
         {
             var house = SpawnHouse(3);

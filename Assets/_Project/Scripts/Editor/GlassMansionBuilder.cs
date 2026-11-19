@@ -606,10 +606,8 @@ namespace HorrorGame.EditorTools
             var sources = new List<NavMeshBuildSource>();
             NavMeshBuilder.CollectSources(bounds, Physics.DefaultRaycastLayers, NavMeshCollectGeometry.PhysicsColliders, 0,
                 new List<NavMeshBuildMarkup>(), sources);
-            // Same as the runtime bake: the player and the monster are not part of the walkable map.
-            sources.RemoveAll(s => s.component != null &&
-                                   (s.component.GetComponentInParent<CharacterController>() != null ||
-                                    s.component.GetComponentInParent<NavMeshAgent>() != null));
+            // Same filter as the runtime bake: no players, monsters or carving obstacles (the glass).
+            sources.RemoveAll(HorrorGame.AI.RuntimeNavMesh.IsMovingThing);
             var settings = NavMesh.GetSettingsByID(0);
             settings.agentRadius = 0.4f;
             settings.agentHeight = 2.2f;
